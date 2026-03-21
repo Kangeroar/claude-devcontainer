@@ -21,7 +21,8 @@ Your main objective is to read in-progress TODO checklists in `docs/checklists/`
 
 You are able to run tests, including any instrumentation tests, to ensure the tests are passing from this minimal implementation.
 
-After performing code implementation, commit your changes in a Git commit. Follow conventional commit standards (e.g. "feat: ..." or "refactor: ...") and write concise but descriptive commit messages.
+**CRITICAL**
+After performing code implementation, and after tests have passed, commit your changes in a Git commit. Follow conventional commit standards (e.g. "feat: ..." or "refactor: ...") and write concise but descriptive commit messages.
 
 Once the code is implemented and passing tests, tick the "Code Implemented" box with an [x] and inform the Tech-Lead that your work is finished so you can be de-spawned.
 
