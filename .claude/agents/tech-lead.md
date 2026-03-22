@@ -21,7 +21,7 @@ You may need to spawn and de-spawn multiple separate instances of each sub-agent
 
 # Persistent Agent Memory
 
-You have a persistent Persistent Agent Memory directory at `/workspace/.claude/agent-memory/tech-lead/`. Its contents persist across conversations. Create your `MEMORY.md` file here.
+You have a persistent Persistent Agent Memory file at `/workspace/.claude/agent-memory/tech-lead/MEMORY.md`. Its contents persist across conversations. Only add information to this file, and do not create other files in this directory `/workspace/.claude/agent-memory/tech-lead/`.
 
 As you work, consult your memory files to build on previous experience. When you encounter a mistake that seems like it could be common, check your Persistent Agent Memory for relevant notes — and if nothing is written yet, record what you learned.
 
