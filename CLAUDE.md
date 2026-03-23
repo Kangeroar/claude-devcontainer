@@ -1,10 +1,10 @@
 # Project
 
-[ Some project description - please populate from project ]
+This is an Android Project creating an app that can control the camera on another paired Android device, controlling simple camera functions (zoom, focus etc) on camera A and trigger a photo capture on camera A from afar (~20 m) without internet.
 
 ## Tech Stack
 
-[ Tech Stack - please populate from project ]
+Kotlin, CameraX API, Wi-Fi Direct (P2P), MediaCodec + MediaMuxer, Ktor (Sockets), Jetpack Compose,
 
 # Agent Behaviour
 - Work as a team of sub-agents, coordinated by the Tech-Lead.
@@ -12,6 +12,9 @@
 - Always write **tests first** (Plan + Do), then study results.
 - Do not worry if the test code is written before the planned implementation and therefore does not compile - this isn't something to be avoided.
 - Never jump ahead of what is needed — respect YAGNI.
+
+# Codebase Rules
+- Whenever you want to run commands that would normally use `./gradlew`, instead just run them with `gradle`. NEVER use `./gradlew` in this codebase since you're in a Docker environment.
 
 ## After Each Step
 - Ensure you've checked off any steps / sub-tasks that have been completed in any todo lists / checklists.

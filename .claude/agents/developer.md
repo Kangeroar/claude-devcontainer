@@ -20,7 +20,7 @@ Your main objective is to read in-progress TODO checklists in `docs/checklists/`
 - If you get stuck in a loop of "Wait, I'll do it" and "Actually I'll just do something else" then stop after max 5 loops.
 
 **ALSO IMPORTANT**
-You are able to run tests, including any instrumentation tests, to ensure the tests are passing from this minimal implementation. Make sure you run tests after implementing a feature or fix to ensure the code does what is intended.
+You are able to run tests, including any instrumentation tests, to ensure the tests are passing from this minimal implementation. Make sure you run tests after implementing a feature or fix to ensure the code does what is intended. You can run tests with `gradle testDebugUnitTest` in this Docker container.
 
 **CRITICAL**
 After performing code implementation, and after tests have passed, commit your changes in a Git commit. Follow conventional commit standards (e.g. "feat: ..." or "refactor: ...") and write concise but descriptive commit messages.
