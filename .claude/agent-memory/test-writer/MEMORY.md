@@ -1,5 +1,8 @@
 # Test-Writer Memory
 
+## Topical Guides
+- [End-to-End Control Testing Pattern](e2e-control-testing.md) - Manual frame routing for Device A/B bidirectional tests
+
 ## WiFi Direct P2P Connection Testing (Project Camera)
 
 ### Socket Server Eager-Binding Pattern

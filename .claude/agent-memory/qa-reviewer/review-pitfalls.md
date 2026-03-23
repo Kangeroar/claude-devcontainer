@@ -4,6 +4,16 @@ description: Common test anti-patterns found in the RemoteShutter project, espec
 type: feedback
 ---
 
+## Notes from Step 5.5 review (End-to-end integration tests)
+
+**Unused imports in E2E test files are style-only, not blockers:** `EndToEndControlTest.kt` imports `FrameHeader`, `FrameType`, `DataInputStream`, `ByteArrayInputStream` that are not used in any test body. These are harmless but should be noted as minor style issues.
+
+**Mixed-type stress test may only verify one command type:** `testRapidMixedCommands` sends 50 `SetZoom` + 50 `TapToFocus` (100 total) but only asserts `setZoomCallCount == 50`, leaving `tapToFocusCallCount` unverified. This is a half-verification — the test still catches dropped zoom commands but would not catch dropped focus commands. Flag as minor gap when reviewing mixed-type stress tests; do not block QA if a separate single-type stress test covers the full 100 count.
+
+**`EventReceiver` and `capturePhoto()` compete on the same `eventChannel`:** `ChannelMux.eventFrames()` returns `receiveAsFlow()` from a single `Channel` instance. If both `EventReceiver.start()` and `RemoteCameraControllerImpl.capturePhoto()` are active simultaneously, they will compete for the same events — only one consumer receives each frame. Integration tests must not start `EventReceiver` in the same test that calls `capturePhoto()` (and vice versa), or both will see partial event streams. This is by design but must be respected in test setup.
+
+**`advanceUntilIdle()` works correctly when infinite polling coroutines are suspended on channel receive:** An `EventPublisher` with a `while(true) { delay(100ms) }` loop or a `ChannelMux` collecting from an open channel will not block `advanceUntilIdle()` — suspended coroutines waiting on channels/delays are not "active work". Only coroutines with queued tasks prevent idle. This means `advanceUntilIdle()` is safe to use for stress tests that end with all frames injected and processing complete.
+
 ## Notes from Step 5.3 review (RemoteCameraController / command sender)
 
 **`transferId` field on `PhotoChunk` exists for correlation but may be ignored:** `CameraEvent.PhotoChunk` has a `transferId: Int` field. When a checklist step says "assign a request ID, await matching event", verify the implementation uses `transferId` to filter incoming chunks. An implementation that collects any `PhotoChunk` without checking `transferId` fails the correlation requirement — concurrent capture calls would interleave incorrectly.
