@@ -4,6 +4,21 @@ description: Common test anti-patterns found in the RemoteShutter project, espec
 type: feedback
 ---
 
+## Notes from Step 6.1 review (Compose Navigation + ControllerViewModel + screen skeletons)
+
+**Trivially-passing Compose/ViewModel tests via hardcoded string literals:** When Compose UI tests cannot run in JVM unit tests (they require instrumented tests), the correct fallback is source-scanning tests — not tests that assert `assert("RoleSelectScreen".isNotEmpty())`. A test that only stores a string literal in a `val` and asserts non-emptiness provides zero regression value. The implementation can be deleted entirely and the test still passes.
+
+**Source-scanning is the correct JVM fallback for Compose composables:** For `@Composable` functions and `@HiltViewModel` classes in the `:app` module (which cannot be instantiated in JVM unit tests without the full Android/Hilt runtime), the correct testing approach is:
+  - Read the source file via `File(projectDir, "relative/path/to/File.kt").readText()`
+  - Assert `.contains("@Composable")`, `.contains("fun FunctionName")`, `.contains("@Preview")`, etc.
+  This directly verifies the implementation rather than asserting tautologies.
+
+**ControllerViewModel CAN be constructed in JVM tests by bypassing Hilt:** Even though `ControllerViewModel` is `@HiltViewModel`, the class is a plain Kotlin class with a constructor. JVM unit tests can instantiate it directly using a fake `RemoteCameraController` (it's an interface) and a fake `ChannelMux` passed to a real `EventReceiver`. This gives real behavioural coverage without instrumented tests.
+
+**`assert(navRoutes != null)` on a Kotlin `object` is always true:** Kotlin `object` singletons can never be null — this assertion is a no-op. Flag as trivially-passing but do not block if other meaningful tests exist in the same class.
+
+**How to apply:** When reviewing any Compose UI or ViewModel test file, check that at least one test constructs or reads the actual class under test. If every test body starts with `val name = "SomeName"` and ends with `assert(name.isNotEmpty())`, the entire file must be failed on "Tests Written". Source-scanning or direct construction must replace the trivial assertions.
+
 ## Notes from Step 5.5 review (End-to-end integration tests)
 
 **Unused imports in E2E test files are style-only, not blockers:** `EndToEndControlTest.kt` imports `FrameHeader`, `FrameType`, `DataInputStream`, `ByteArrayInputStream` that are not used in any test body. These are harmless but should be noted as minor style issues.

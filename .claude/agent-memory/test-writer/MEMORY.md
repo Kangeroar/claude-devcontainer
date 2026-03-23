@@ -2,6 +2,40 @@
 
 ## Topical Guides
 - [End-to-End Control Testing Pattern](e2e-control-testing.md) - Manual frame routing for Device A/B bidirectional tests
+- [Compose UI Testing Patterns](compose-ui-testing.md) - Navigation routes, ViewModels, screen skeletons for checklist 6
+
+## Compose UI and ViewModel Testing (Checklist 6.1 -- Fixed)
+
+### Source-Scanning for Compose Screens
+Compose @Composable functions cannot be directly instantiated in JVM unit tests (no Android runtime).
+Instead, use source-scanning to verify implementation:
+1. Read the .kt file with `File(System.getProperty("user.dir"), "path/to/Screen.kt").readText()`
+2. Use lazy initialization to defer file I/O until test runs (avoid failing at class-load time)
+3. Assert on presence of: @Composable, function signature, callback parameters, layout composition (Column, Box), modifiers (fillMaxSize), Text content
+4. Verify event routing: assert screenSource.contains("onClick { onRoleSelected(Role.CAMERA) }")
+5. Verify preview structure: assert contains "@Preview", preview function name, "RemoteShutterTheme" wrapping
+
+### ViewModel Testing with Fakes (Bypass Hilt for JVM tests)
+ControllerViewModel uses @HiltViewModel which requires Android instrumentation. For JVM unit tests:
+1. Create fake implementations of all injected dependencies (RemoteCameraController, EventReceiver)
+2. For EventReceiver: extend it since it's a concrete non-final class; override `stop()` to track invocations
+3. For RemoteCameraController: implement interface with tracking fields (lastSetZoomRatio, etc.)
+4. For nested dependencies (ChannelMux, P2pConnection): create minimal fakes that satisfy interfaces
+5. Construct ViewModel directly: `ControllerViewModel(fakeController, fakeEventReceiver)` (bypasses Hilt)
+6. Test behaviors without coroutines: StateFlow defaults, state exposure, onCleared cleanup
+7. Avoid using viewModelScope in tests (requires Android context); test only behavior not async dispatch
+
+**Why**: Hilt requires Android context; fakes allow verifying the ViewModel's logic without it. viewModelScope.launch is implementation detail; test the state exposure instead.
+
+### Fixed Issues in Checklist 6.1.2, 6.1.3, 6.1.4 (2026-03-23)
+- **6.1.2 RoleSelectScreenTest**: Replaced 9 trivial tests with 9 source-scanning tests verifying screen structure
+- **6.1.3 ControllerViewModelTest**: Replaced 14 trivial tests with 14 source-scanning tests + 4 behavioral tests with fakes
+- **6.1.4 ScreenPreviewTests**: Replaced 18 trivial tests with 18 source-scanning tests for all 4 screens
+
+File references (fixed):
+- `/workspace/app/src/test/java/com/remoteshutter/ui/screens/RoleSelectScreenTest.kt`
+- `/workspace/app/src/test/java/com/remoteshutter/ui/screens/ControllerViewModelTest.kt`
+- `/workspace/app/src/test/java/com/remoteshutter/ui/screens/ScreenPreviewTests.kt`
 
 ## WiFi Direct P2P Connection Testing (Project Camera)
 
