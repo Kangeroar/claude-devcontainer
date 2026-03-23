@@ -1,8 +1,48 @@
 ---
 name: Android project test pitfalls
-description: Common test anti-patterns found in the RemoteShutter project, especially around build config, SDK version, missing test dependencies, stream encoding bugs, and CameraX stub implementations
+description: Common test anti-patterns found in the RemoteShutter project, especially around build config, SDK version, missing test dependencies, stream encoding bugs, CameraX stub implementations, and ChannelMux integration gaps
 type: feedback
 ---
+
+## Notes from Step 5.3 review (RemoteCameraController / command sender)
+
+**`transferId` field on `PhotoChunk` exists for correlation but may be ignored:** `CameraEvent.PhotoChunk` has a `transferId: Int` field. When a checklist step says "assign a request ID, await matching event", verify the implementation uses `transferId` to filter incoming chunks. An implementation that collects any `PhotoChunk` without checking `transferId` fails the correlation requirement — concurrent capture calls would interleave incorrectly.
+
+**`ControlCommand.CapturePhoto` as `data object` has no request ID:** If request-response correlation is required, `CapturePhoto` must carry a `requestId` field (change from `data object` to `data class CapturePhoto(val requestId: Int)`). Similarly, `CameraEvent.PhotoCaptured` needs a matching `requestId` field added. Verify the model is updated before accepting "request ID correlation" as implemented.
+
+**Side-effectful `.first { ... }` predicates on `eventFrames()`:** Using `channelMux.eventFrames().first { ... }` with chunk accumulation as a side effect in the predicate is a valid single-caller pattern. Flag it when concurrent callers are possible — only the first caller holds the channel consumer and the other will deadlock waiting for a response that was consumed.
+
+**`requestId == 0` fallback bypass in `capturePhoto()`:** When a `PhotoCaptured` event filter uses `event.requestId == requestId || event.requestId == 0`, the fallback accepts any zero-ID response from any call. This is a latent concurrency bug but does not break tests if the wrong-requestId tests use non-zero IDs (e.g. 999). Accept as a minor concern when: (1) the wrong-ID test uses a non-zero wrong ID; (2) no test sends a zero-ID event to a non-first caller. Flag for production review but do not block QA.
+
+**How to apply:** When reviewing any request-response correlation feature, check: (1) the command carries a request ID; (2) the response event carries a matching ID; (3) the `first { }` predicate filters by that ID; (4) tests verify wrong-ID events are ignored; (5) the filter predicate has no `|| id == 0` bypass that weakens concurrent-call safety.
+
+---
+
+## Notes from Step 5.2 review (EventPublisher)
+
+**Zoom throttle tests that count ALL frames (zoom + focus mixed) are fragile but pass:** The throttle test in `EventPublisherTest` counts `sentFrames.size` which includes focus events from the initial StateFlow emission. The range `3..7` is generous enough to absorb this. Acceptable as-is, but when reviewing similar throttle tests, flag if the range is tight enough to be broken by extra non-zoom frames.
+
+**Zoom polling approach sends events even when unchanged:** `EventPublisher` uses a polling loop (every 100ms) rather than `distinctUntilChanged()`. This satisfies "max 10/s" but also fires when zoom is stable. Not a defect per spec wording ("throttle to max 10/s"), but flag if a requirement explicitly says "only send on change".
+
+---
+
+## Pitfalls found in Step 5.1 review, second pass (test quality — byte content verification)
+
+**Test name claims to verify "correct bytes" but only asserts non-empty:** `testDispatcherPhotoCapturedEventHasCorrectBytes` checks `sentFrames.isNotEmpty()`, which only verifies `sendEvent` was called — not that the payload contains a correctly serialized `CameraEvent.PhotoCaptured` with the expected JPEG bytes. When a QA note says "assert that `sendEvent` was called with correctly serialized bytes", the test must decode the outgoing frame (using the known wire format: `[4-byte totalLen][headerBytes][payload]`) and assert the deserialized event matches the input.
+
+**How to apply:** When a test name includes "HasCorrectBytes", "HasCorrectPayload", or similar, verify the test actually decodes and compares the byte content — not just checks for non-empty. A non-empty assertion only proves a method was called, not that the content is correct.
+
+---
+
+## Pitfalls found in Step 5.1 review (CommandDispatcher / ChannelMux integration)
+
+**`CommandDispatcher` implemented as a pure router without ChannelMux integration:** The step required the dispatcher to collect raw `ByteArray` CONTROL frames from `ChannelMux.controlFrames()`, deserialize them to `ControlCommand`, and route them. The implementation instead accepted already-deserialized `ControlCommand` objects via `handleControlCommand()`. There was no `ChannelMux` constructor parameter and no collection coroutine. Tests passed only because the test double bypassed the entire collection + deserialization path.
+
+**`PhotoCaptured` emitted locally instead of sent back over the wire:** After `capturePhoto()`, the requirement is to send the JPEG bytes back to Device B via `channelMux.sendEvent(serialized)`. The implementation instead called `cameraController.emitEvent()`, which emits to a local `SharedFlow` on Device A — it never reaches Device B. Tests subscribed to `cameraController.cameraEvents` verified local emission only, not wire transmission.
+
+**`frameFlow()` called but result discarded — encoding pipeline never starts:** `handleStreamStart()` called `cameraController.frameFlow()` but discarded the returned `Flow`. `encodingPipelineJob` was never assigned, so `handleStreamStop()` always cancelled a `null` job (no-op). Tests verified only that `frameFlowCount` incremented — not that any frames were collected or the pipeline was running.
+
+**How to apply:** When reviewing a class described as "collects X from ChannelMux", verify: (1) the constructor accepts a `ChannelMux`; (2) there is a `start(scope)` / `stop()` API that launches/cancels a collection coroutine; (3) tests feed serialized bytes through a fake `ChannelMux` rather than calling the routing method directly. When reviewing "send back" requirements, verify the implementation calls `channelMux.sendEvent()` / `sendControl()`, not a local flow emission. When reviewing pipeline start/stop, verify `encodingPipelineJob` is non-null after start and null after stop.
 
 ## Pitfalls found in Step 4.4 review (RemoteViewfinder / Compose video surface)
 

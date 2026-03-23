@@ -377,6 +377,280 @@ When receiving VIDEO frames and reconstructing EncodedFrame:
 - ChannelMux: `/workspace/core/network/src/main/java/com/remoteshutter/core/network/ChannelMux.kt`
 - EncodedFrame: `/workspace/feature/camera/src/main/java/com/remoteshutter/feature/camera/EncodedFrame.kt`
 
+## CommandDispatcher Testing (Step 5.1.1-5.1.6)
+
+### CommandDispatcher Pattern and Architecture
+CommandDispatcher routes ControlCommand messages to CameraController methods:
+1. **SetZoom** command -> CameraController.setZoomRatio(ratio)
+2. **TapToFocus** command -> CameraController.tapToFocus(x, y)
+3. **CapturePhoto** command -> CameraController.capturePhoto(), then emit CameraEvent.PhotoCaptured
+4. **RequestStreamStart** -> activate encoding pipeline (call cameraController.frameFlow())
+5. **RequestStreamStop** -> deactivate encoding pipeline (cancel Job)
+
+### Test Fixture (TestCameraController)
+Mock CameraController implementation with instrumentation:
+1. Track method calls: `lastSetZoomRatio`, `lastTapToFocusX`, `lastTapToFocusY`, `capturePhotoCallCount`
+2. Allow configurable results: `capturePhotoResult` (Success/Error)
+3. Emit events via `cameraEvents: SharedFlow<CameraEvent>`
+4. Control frame flow access: `frameFlowCount` tracks how many times frameFlow() called
+
+### Comprehensive Test Coverage (26 tests)
+1. **Deserialization** - CommandDispatcher deserializes CONTROL frames to ControlCommand
+2. **SetZoom routing** - values passed through to controller (minimum, maximum, consecutive)
+3. **TapToFocus routing** - coordinates passed through (boundaries, various values)
+4. **CapturePhoto routing** - controller.capturePhoto() called, handles Success/Error results
+5. **Stream lifecycle** - RequestStreamStart/Stop control frame flow access
+6. **Event emission** - PhotoCaptured events sent with correct JPEG bytes
+7. **Error handling** - graceful handling of capture errors
+8. **Rapid commands** - no deadlocks under rapid successive commands
+9. **Initialization state** - isInitialized flag exposed
+
+### File References
+- Tests: `/workspace/feature/controller/src/test/java/com/remoteshutter/feature/controller/CommandDispatcherTest.kt`
+- Implementation: `/workspace/feature/controller/src/main/java/com/remoteshutter/feature/controller/CommandDispatcher.kt`
+- Dependency update: `/workspace/feature/controller/build.gradle.kts` (added feature:camera, kotlin.test, coroutines-test)
+
+## CommandDispatcher Testing (Step 5.1.1-5.1.6) - REVISED
+
+### QA Defects Fixed
+1. **CommandDispatcher now accepts ChannelMux parameter** in constructor
+2. **PhotoCaptured events sent via ChannelMux.sendEvent()** (serialized bytes), not locally
+3. **RequestStreamStart launches a job that collects from frameFlow()** (not just calls it)
+4. **RequestStreamStop cancels the encoding pipeline job**
+5. **Integration tests verify full ChannelMux deserialization path**
+6. **testDispatcherPhotoCapturedEventHasCorrectBytes** now decodes sent frame and verifies bytes (FIXED 2026-03-23)
+
+### Test Fixture Patterns
+**TestCameraController**:
+- Added `frameFlowCollectionStarted` flag to verify collection actually occurs
+- Added `emittedFrames` list to inject test frames
+- `frameFlow()` returns a real Flow that emits injected frames
+
+**TestP2pConnection**:
+- Implements P2pConnection with Channel-based frame injection
+- Tracks sent frames via `getOutgoingSentFrames()`
+- Allows tests to inject raw bytes and capture outgoing frames
+
+### PhotoCaptured Event Payload Verification (Step 5.1.4 QA Fix)
+Test `testDispatcherPhotoCapturedEventHasCorrectBytes` was only asserting `sentFrames.isNotEmpty()`. Fixed by:
+1. **Parse wire frame**: Read 4-byte big-endian length, then read totalContent
+2. **Extract payload**: Use `extractProtoField2Varint(totalContent)` to find header/payload boundary
+3. **Decode event**: `ProtoBuf.decodeFromByteArray(CameraEvent.serializer(), payload)`
+4. **Assert PhotoCaptured**: Verify it's a PhotoCaptured event
+5. **Compare bytes**: Assert `photoCaptured.bytes.contentEquals(jpegBytes)`
+
+Helper methods needed:
+- `extractProtoField2Varint(bytes): Int` - scans ProtoBuf for field 2 varint (payloadLength)
+- `readVarint(bytes, offset): Pair<Long, Int>` - reads ProtoBuf varint encoding
+
+### Comprehensive Test Coverage (26+ tests)
+- 5.1.1: CommandDispatcher deserialization from ChannelMux frames
+- 5.1.2-5.1.3: SetZoom and TapToFocus routing (multiple variants)
+- 5.1.4: CapturePhoto -> ChannelMux.sendEvent() with correct JPEG bytes in payload
+- 5.1.5: RequestStreamStart/Stop with job lifecycle
+- 5.1.6: Integration tests, rapid commands, error handling
+
+### File References
+- Tests: `/workspace/feature/controller/src/test/java/com/remoteshutter/feature/controller/CommandDispatcherTest.kt`
+- Implementation: `/workspace/feature/controller/src/main/java/com/remoteshutter/feature/controller/CommandDispatcher.kt`
+
+## EventPublisher Testing (Step 5.2.1-5.2.4)
+
+### EventPublisher Architecture Pattern
+EventPublisher observes CameraController state flows and publishes events via ChannelMux:
+1. **ZoomChanged events**: Throttled to max 10/s (1 event per 100ms minimum)
+2. **FocusStateChanged events**: NOT throttled, sent immediately on state change
+3. **PhotoChunked transfer**: Large photos split into 64KB chunks with sequence numbers
+
+### PhotoChunk Event Design
+New CameraEvent.PhotoChunk variant for chunked photo transfers:
+- `transferId: Int` - unique ID for grouping chunks from same photo
+- `chunkIndex: Int` - sequence number (0-based) within this transfer
+- `totalChunks: Int` - total number of chunks in this transfer
+- `data: ByteArray` - chunk payload (max 64KB)
+
+**Why**: Photos may be several MB; single large frame would exceed buffer limits. Chunking with sequence numbers allows reassembly on receiver side.
+
+### Test Fixture Patterns
+**TestCameraControllerForEventPublisher**:
+- Exposes mutable StateFlow for zoomState and focusState
+- Allows tests to trigger changes via direct assignment to MutableStateFlow.value
+- Empty implementation of other CameraController methods
+
+**TestP2pConnectionForEventPublisher**:
+- Tracks all sent frames in `sentFrames` list
+- No-op receive() (not needed for sender-side tests)
+
+### EventPublisher Test Coverage (14 tests)
+1. testEventPublisherSendsZoomChangedEvent - zoom state → ZoomChanged event
+2. testEventPublisherSendsFocusStateChangedEvent - focus state → FocusStateChanged event
+3. testEventPublisherSendsMultipleEvents - sequential zoom + focus events
+4. testEventPublisherThrottlesZoomEvents - rapid zoom changes → max 5 per 500ms
+5. testEventPublisherDoesNotThrottleFocusEvents - all focus changes sent
+6. testEventPublisherChunksLargePhoto - 200KB photo → 4+ chunks
+7. testEventPublisherSendsSmallPhotoAsingleChunk - 32KB photo → 1 chunk
+8. testEventPublisherPhotoChunkSequenceNumbers - chunks have correct indices
+9. testEventPublisherPhotoChunksHaveSameTransferId - all chunks in transfer share ID
+10. testEventPublisherSerializesZoomChangedCorrectly - ZoomChanged round-trip
+11. testEventPublisherSerializesFocusStateChangedCorrectly - FocusStateChanged round-trip
+12. testEventPublisherSerializesPhotoChunkCorrectly - PhotoChunk round-trip
+13. testEventPublisherLifecycle - start()/stop() execute without error
+14. testEventPublisherDifferentPhotoTransfersHaveDifferentIds - different photos ≠ same ID
+
+### Wire Frame Decoding Helper
+For unit tests that need to verify serialized events:
+- Use `decodeEventFrame(frameBytes)` helper to parse wire format
+- Returns (FrameHeader, payload) where payload is raw CameraEvent bytes
+- Mirrors ChannelMux.decodeFrame() logic using `extractProtoField2Varint()`
+
+### Throttling Implementation Pattern
+For zoom throttling (max 10/s):
+- Track last emission time
+- On zoom state change, check if 100ms elapsed since last emission
+- If yes: emit immediately and update timestamp
+- If no: buffer the latest value, emit on next allowed time window
+
+**Why**: Simple time-based throttling prevents flooding; `advanceTimeBy()` in tests simulates passage of time
+
+### File References
+- Tests: `/workspace/feature/controller/src/test/java/com/remoteshutter/feature/controller/EventPublisherTest.kt`
+- Implementation stub: `/workspace/feature/controller/src/main/java/com/remoteshutter/feature/controller/EventPublisher.kt`
+- Updated CameraEvent: `/workspace/core/model/src/main/java/com/remoteshutter/core/model/CameraEvent.kt` (added PhotoChunk)
+
+## RemoteCameraController Testing (Step 5.3.1-5.3.4)
+
+### RemoteCameraController Interface and Implementation Pattern
+RemoteCameraController is a command sender on Device B that sends control commands via ChannelMux:
+1. **Interface methods** (all suspend): setZoom(ratio), tapToFocus(x, y), capturePhoto(), startStream(), stopStream()
+2. **Implementation** (RemoteCameraControllerImpl):
+   - Serializes each call as ControlCommand via ProtoBuf
+   - Sends via `channelMux.sendControl(bytes)`
+   - For capturePhoto(): sends CapturePhoto command, then awaits PhotoCaptured event from eventFrames()
+3. **Request-response correlation** for photo capture:
+   - Since ControlCommand.CapturePhoto has no request ID field, use single-in-flight correlation
+   - Await the NEXT PhotoCaptured event (or reassemble from PhotoChunk frames) with 5s timeout
+   - If timeout: throw TimeoutCancellationException
+
+### Test Fixture for RemoteCameraController (TestP2pConnectionForRemote)
+Mock P2pConnection with instrumentation:
+1. Implements send() by appending to `outgoingFrames` list
+2. Implements receive() via Channel that tests can inject into via `injectIncomingFrame()`
+3. Tracks sent frames for assertion: `getOutgoingSentFrames()`
+
+**Why**: Decouples RemoteCameraController tests from real sockets; allows deterministic event injection
+
+### RemoteCameraController Test Coverage (13 tests)
+1. **setZoom** - sends SetZoom command via ChannelMux
+2. **tapToFocus** - sends TapToFocus command with x,y coordinates
+3. **startStream** - sends RequestStreamStart command
+4. **stopStream** - sends RequestStreamStop command
+5. **capturePhoto sends command** - sends CapturePhoto command
+6. **capturePhoto receives bytes** - awaits PhotoCaptured event and returns JPEG bytes
+7. **capturePhoto timeout** - throws when no PhotoCaptured arrives within timeout
+8. **serialization correctness** - verify all sent frames deserialize to valid ControlCommand
+9. **chunked photo** - handle PhotoChunk frames, reassemble and await final PhotoCaptured
+10. **interface completeness** - verify all methods exist and are callable
+11. **rapid commands** - handle consecutive commands without deadlock
+12. **await PhotoCaptured correctly** - proper async waiting for response
+13. **serialization round-trips** - ControlCommand and CameraEvent serialize/deserialize correctly
+
+### Frame Encoding/Decoding in RemoteCameraController Tests
+When verifying sent command frames:
+1. Read 4-byte big-endian length from DataInputStream
+2. Read totalLength bytes of content
+3. Use `extractProtoField2Varint(totalContent)` to find FrameHeader/payload boundary
+4. Extract payload: `totalContent.copyOfRange(headerSize, totalLength)`
+5. Deserialize payload as ControlCommand or CameraEvent
+**Why**: FrameHeader includes dynamic-length field 2 (payloadLength); must manually split
+
+When injecting event responses:
+1. Serialize CameraEvent (PhotoCaptured or PhotoChunk) to ProtoBuf bytes
+2. Wrap in FrameHeader(FrameType.EVENT, payloadSize, timestamp)
+3. Use `createEventFrame(payload)` helper to encode wire format
+4. Inject via `connection.injectIncomingFrame(frameBytes)`
+
+### PhotoChunk and Reassembly Pattern
+For testing chunked photo reassembly:
+1. Create multiple PhotoChunk events with: transferId (same for all), chunkIndex (0-based), totalChunks, data
+2. Inject all chunks in sequence
+3. Then inject final PhotoCaptured event with complete JPEG bytes
+4. Controller should buffer PhotoChunk frames and match against final PhotoCaptured
+**Why**: Photos may be several MB; ChannelMux buffers are limited to 64 entries
+
+### File References
+- Tests: `/workspace/feature/controller/src/test/java/com/remoteshutter/feature/controller/RemoteCameraControllerTest.kt`
+- Interface (to be implemented): `/workspace/feature/controller/src/main/java/com/remoteshutter/feature/controller/RemoteCameraController.kt`
+- Implementation (to be implemented): `/workspace/feature/controller/src/main/java/com/remoteshutter/feature/controller/RemoteCameraControllerImpl.kt`
+
+## EventReceiver Testing (Step 5.4.1-5.4.4)
+
+### EventReceiver Architecture Pattern
+EventReceiver is an event listener on Device B that collects EVENT frames from ChannelMux:
+1. **Collect eventFrames()** in a coroutine started by start(scope)
+2. **Deserialize frames** to CameraEvent via ProtoBuf
+3. **Route events**:
+   - ZoomChanged → update remoteZoomState StateFlow
+   - FocusStateChanged → update remoteFocusState StateFlow
+   - PhotoChunk → accumulate chunks, emit onPhotoReceived when complete
+   - PhotoCaptured → invoke onPhotoReceived directly
+   - Error/others → ignore
+4. **Initial values**:
+   - remoteZoomState: 1.0f
+   - remoteFocusState: FocusState.FOCUSED
+5. **Photo reassembly**: Store partial photos by transferId, emit only when all chunks arrived
+
+### Test Fixture (TestEventP2pConnection)
+Mock P2pConnection for event receiver tests:
+1. Implements receive() with Channel<ByteArray>
+2. `injectIncomingFrame(frameBytes)` method for tests to queue frames
+3. Tracks `isConnected` flag (set to false on close())
+4. No-op send() (not used by EventReceiver)
+
+**Why**: Decouples EventReceiver tests from real network; allows deterministic event injection
+
+### EventReceiver Test Coverage (16 tests)
+1. testEventReceiverAcceptsChannelMuxParameter - constructor and properties exist
+2. testEventReceiverRemoteZoomStateInitialValue - initial zoom = 1.0f
+3. testEventReceiverRemoteFocusStateInitialValue - initial focus = FOCUSED
+4. testEventReceiverUpdatesZoomState - ZoomChanged event updates remoteZoomState
+5. testEventReceiverUpdatesFocusState - FocusStateChanged event updates remoteFocusState
+6. testEventReceiverIgnoresUnrelatedEvents - Error events don't change state
+7. testEventReceiverReassemblesChunkedPhoto - 3 PhotoChunk frames → reassembled bytes
+8. testEventReceiverSingleChunkPhoto - 1 PhotoChunk with totalChunks=1 → callback invoked
+9. testEventReceiverHandlesDirectPhotoCaptured - PhotoCaptured event → callback with bytes
+10. testEventReceiverIgnoresChunksFromDifferentTransfers - 2 transfers reassembled independently
+11. testEventReceiverDeserializesZoomChangedEvent - ZoomChanged round-trip
+12. testEventReceiverDeserializesFocusStateChangedEvent - FocusStateChanged round-trip
+13. testEventReceiverDeserializesPhotoChunkEvent - PhotoChunk round-trip with metadata
+14. testEventReceiverDeserializesPhotoCapturedEvent - PhotoCaptured round-trip
+15. testEventReceiverStartStop - start(scope) subscribes, stop() cancels
+16. testEventReceiverHandlesMultipleZoomUpdates - rapid zoom changes tracked
+17. testEventReceiverHandlesMultipleFocusUpdates - rapid focus changes tracked
+18. testEventReceiverHandlesOutOfOrderChunks - chunks reassembled in correct order
+19. testEventReceiverReassemblesLargePhoto - 10 chunks × 1000 bytes each
+20. testEventReceiverPhotoCallbackIsOptional - onPhotoReceived can be null
+
+### Wire Frame Helper
+`createEventFrame(payload: ByteArray)` helper wraps payload in ChannelMux format:
+- Encode FrameHeader(FrameType.EVENT, payload.size, 0L) with ProtoBuf
+- Prepend 4-byte big-endian length to (header + payload)
+- Return complete wire bytes
+**Why**: Tests need to inject frames that match ChannelMux wire format exactly
+
+### Chunk Reassembly Pattern
+Track per-transferId state:
+1. Map<Int, MutableList<PhotoChunk>> storing chunks by transferId
+2. Keep sorted by chunkIndex for correct ordering
+3. When chunkIndex==0 arrives: allocate new list
+4. When chunkIndex==N arrives: insert in sorted position
+5. When count == totalChunks: reassemble and invoke callback
+
+**Why**: Out-of-order chunk injection requires buffering; sorted map prevents ordering errors
+
+### File References
+- Tests: `/workspace/feature/controller/src/test/java/com/remoteshutter/feature/controller/EventReceiverTest.kt`
+- Implementation (to be implemented): `/workspace/feature/controller/src/main/java/com/remoteshutter/feature/controller/EventReceiver.kt`
+
 ## H.264 Video Decoder Testing (Step 4.3.1-4.3.6)
 
 ### DecoderState Enum Pattern

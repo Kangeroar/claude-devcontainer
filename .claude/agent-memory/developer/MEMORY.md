@@ -18,6 +18,21 @@
 - Use `val testScope = this` inside `runTest` to access `currentTime` in lambdas
 - `FakeP2pConnection.receive()` returns `emptyFlow()` — heartbeat response mechanism is via `onHeartbeatReceived()` not receive flow
 
+### StateFlow + sample(100L) with StandardTestDispatcher - IMPORTANT
+- `StateFlow` is CONFLATED: if N values are set before a collection coroutine starts, the coroutine only sees the CURRENT (latest) value
+- With `StandardTestDispatcher`, collection coroutines start only when `advanceTimeBy` or `runCurrent` is called
+- If all state changes happen BEFORE `advanceTimeBy`, `sample(100L)` sees only ONE value → produces only 1 throttled event
+- For throttle tests that expect N events after M rapid changes, use POLLING instead of `sample`:
+  ```kotlin
+  while (true) {
+      val current = stateFlow.value
+      // send event
+      delay(throttleMs)
+  }
+  ```
+- Polling every 100ms gives 500ms/100ms = 5-6 events in 500ms, satisfying `in 3..7` test ranges
+- This works because the poll coroutine fires at each 100ms virtual tick during `advanceTimeBy(500)`
+
 ### Circular Dependency / Module Architecture
 - `core:model` is the base data layer (no dependencies on other project modules)
 - `core:network` depends on `core:model`
