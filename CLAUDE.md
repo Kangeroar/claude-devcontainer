@@ -15,6 +15,7 @@ Kotlin, CameraX API, Wi-Fi Direct (P2P), MediaCodec + MediaMuxer, Ktor (Sockets)
 
 # Codebase Rules
 - Whenever you want to run commands that would normally use `./gradlew`, instead just run them with `gradle`. NEVER use `./gradlew` in this codebase since you're in a Docker environment.
+- When running tests, run them with a timeout of 10 seconds. If a test timesout, assume that it is a hanging test that never finishes and fix it.
 
 ## After Each Step
 - Ensure you've checked off any steps / sub-tasks that have been completed in any todo lists / checklists.

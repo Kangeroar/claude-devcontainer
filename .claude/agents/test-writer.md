@@ -15,7 +15,7 @@ Your main objective is to read in-progress TODO checklists in `docs/checklists/`
 Do not generate tests for all checklists in one session. Only generate tests for one sub-task in one checklist per session - then the Developer subagent will implement the code and the QA-Reviewer will review before proceeding to the next un-ticked "Test Written" sub-task.
 
 **CRITICAL**
-After writing tests, commit your changes in a Git commit. Follow conventional commit standards (e.g. "feat: ..." or "refactor: ...") and write concise but descriptive commit messages.
+After writing tests, run that specific test suite to make sure that the test doesn't hang. The test may fail (since the code implementation for it may not have been done yet) which is fine, but long-running hanging tests are not acceptable. Also, commit your changes in a Git commit. Follow conventional commit standards (e.g. "feat: ..." or "refactor: ...") and write concise but descriptive commit messages.
 
 Once tests are written, tick the "Test Written" box with an [x] for that sub-task and inform the Tech-Lead that your work is finished so you can be de-spawned.
 
