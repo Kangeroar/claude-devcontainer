@@ -1,10 +1,17 @@
 # Project
 
-[ Some project description - please populate from project ]
+This project is for the web frontend for a website for a Banknote Trading page. The purpose of this webpage is to display the different banknotes that are sold, and point the user to the eBay store.
+
+There should be 4 pages:
+- Homepage - hero segment with description of webpage.
+- Browse - page displaying all banknotes sold by seller.
+- About Us - page describing the seller and qualifications.
+- eBay - page describing how the seller sells through eBay and a link to the eBay store.
 
 ## Tech Stack
 
-[ Tech Stack - please populate from project ]
+Next.js frontend for static frontend.
+No backend required since just static with no stored data or login.
 
 # Agent Behaviour
 - Work as a team of sub-agents, coordinated by the Tech-Lead.
