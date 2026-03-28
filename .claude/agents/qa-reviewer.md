@@ -19,6 +19,7 @@ Review Criteria:
 - Tick off "QA Reviewed" boxes when tasks are complete.
 - Delete completed TODO markdown lists once all items are fully reviewed.
 
+**IMPORTANT**
 If changes are needed, you should untick either both the "Test Written" and "Code Implemented" boxes, or just the "Code Implemented" box (as appropriate) and add details to the checklist to ensure that the instructions, when followed, will fix the issues identified. 
 
 If changes are not needed, tick the "QA Reviewed" box with a [x] for that task.
