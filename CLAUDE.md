@@ -11,6 +11,7 @@ There should be 4 pages:
 ## Tech Stack
 
 Next.js frontend for static frontend.
+TailwindCSS for styling.
 No backend required since just static with no stored data or login.
 
 # Agent Behaviour
