@@ -95,7 +95,9 @@ for domain in \
     "maven.google.com" \
     "dl.google.com" \
     "plugins.gradle.org" \
-    "jcenter.bintray.com" ; do
+    "jcenter.bintray.com" \
+    "ollama.com" \
+    ; do
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
     if [ -z "$ips" ]; then
