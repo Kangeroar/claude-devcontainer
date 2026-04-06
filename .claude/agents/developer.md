@@ -2,7 +2,7 @@
 name: Developer
 description: "Use this agent for implementing code to pass tests"
 tools: Glob, Grep, Read, WebFetch, WebSearch, Command
-model: sonnet
+model: inherit
 color: green
 memory: project
 ---

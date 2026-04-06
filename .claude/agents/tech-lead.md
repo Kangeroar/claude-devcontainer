@@ -2,7 +2,7 @@
 name: Tech-Lead
 description: "Use this agent as the main agent coordinating work"
 tools: Glob, Grep, Read, WebFetch, WebSearch
-model: sonnet
+model: inherit
 color: blue
 memory: project
 ---

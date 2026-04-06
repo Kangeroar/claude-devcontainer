@@ -2,7 +2,7 @@
 name: Test-Writer
 description: "Use this agent for writing tests for subtasks"
 tools: Glob, Grep, Read, WebFetch, WebSearch, Command
-model: haiku
+model: inherit
 color: black
 memory: project
 ---

@@ -2,7 +2,7 @@
 name: Work-Planner
 description: "Use this agent for breaking down tasks into TODO checklists"
 tools: Glob, Grep, Read, WebFetch, WebSearch
-model: opus
+model: inherit
 color: yellow
 memory: project
 ---

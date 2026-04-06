@@ -2,7 +2,7 @@
 name: QA-Reviewer
 description: "Use this agent for reviewing code and tests quality"
 tools: Glob, Grep, Read, WebFetch, WebSearch, Command
-model: sonnet
+model: inherit
 color: red
 memory: project
 ---
