@@ -96,10 +96,11 @@ RUN npm install -g playwright
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
 
+RUN npx playwright install chromium
+
 USER root
 
 RUN npx playwright install-deps
-RUN npx playwright install chromium
 
 RUN chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
