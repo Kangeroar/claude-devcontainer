@@ -18,6 +18,7 @@ No backend required since just static with no stored data or login.
 - Work as a team of sub-agents, coordinated by the Tech-Lead.
 - Generate code through tight learning loops, with test, code implementation and then reviews.
 - Always write **tests first** (Plan + Do), then study results.
+- Use the `check-ui` skill for rapid "test-as-you-go" UI verification using Playwright scratchpad tests in `tests/scratchpad/` and the `.claude/skills/check-ui/check-ui.sh` script.
 - Do not worry if the test code is written before the planned implementation and therefore does not compile - this isn't something to be avoided.
 - Never jump ahead of what is needed — respect YAGNI.
 
