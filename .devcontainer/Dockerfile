@@ -1,4 +1,4 @@
-FROM node:20
+FROM --platform=linux/amd64 node:20
 
 ARG TZ
 ENV TZ="$TZ"
@@ -53,6 +53,14 @@ RUN ARCH=$(dpkg --print-architecture) && \
   wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   sudo dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+
+# Install Ollama
+RUN apt-get update && apt-get install -y --no-install-recommends zstd && \
+    curl -L -o /tmp/ollama.tar.zst -H "User-Agent: Mozilla/5.0" https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tar.zst && \
+    tar -xf /tmp/ollama.tar.zst -C /usr/local/bin && \
+    rm /tmp/ollama.tar.zst && \
+    apt-get autoremove -y zstd && apt-get clean
+ENV PATH=$PATH:/usr/local/bin/bin/
 
 # Set up non-root user
 USER node
