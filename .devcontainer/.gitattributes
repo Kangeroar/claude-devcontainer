@@ -1,0 +1,2 @@
+# Prevent CRLF line endings in shell scripts — they break Linux containers
+*.sh text eol=lf
