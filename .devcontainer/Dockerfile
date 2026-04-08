@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 node:20
+FROM node:20
 
 ARG TZ
 ENV TZ="$TZ"
@@ -55,8 +55,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
   sudo dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
-RUN apt-get update && apt-get install -y --no-install-recommends zstd && \
-    curl -L -o /tmp/ollama.tar.zst -H "User-Agent: Mozilla/5.0" https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tar.zst && \
+RUN ARCH=$(dpkg --print-architecture) && \
+    apt-get update && apt-get install -y --no-install-recommends zstd && \
+    curl -L -o /tmp/ollama.tar.zst -H "User-Agent: Mozilla/5.0" "https://github.com/ollama/ollama/releases/latest/download/ollama-linux-${ARCH}.tar.zst" && \
     tar -xf /tmp/ollama.tar.zst -C /usr/local/bin && \
     rm /tmp/ollama.tar.zst && \
     apt-get autoremove -y zstd && apt-get clean
@@ -90,13 +91,15 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
+# Install Pi
+RUN npm install -g @mariozechner/pi-coding-agent
+
 # Install Playwright
 RUN npm install -g playwright
+RUN npx playwright install chromium
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
-
-RUN npx playwright install chromium
 
 USER root
 
