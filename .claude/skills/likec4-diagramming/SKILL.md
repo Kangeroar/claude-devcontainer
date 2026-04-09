@@ -1,5 +1,5 @@
 ---
-name: LikeC4 Diagramming
+name: likec4-diagramming
 description: LikeC4 diagramming library syntax and patterns
 ---
 # LikeC4 Syntax Guide

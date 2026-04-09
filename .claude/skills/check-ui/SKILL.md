@@ -1,5 +1,7 @@
-# check-ui
-Use this skill to perform rapid "test-as-you-go" verification of UI changes using Playwright.
+---
+name: check-ui
+description: rapid "test-as-you-go" verification of UI changes using Playwright to view the actual web frontend UI.
+---
 
 ## Workflow
 1. **Create a scratchpad test**: Write a focused Playwright test file in `output/frontend/__tests__/playwright/<test_name>.spec.ts`. Keep it minimal and targeted at the current change.
