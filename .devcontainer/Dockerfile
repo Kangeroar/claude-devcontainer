@@ -1,9 +1,7 @@
-FROM node:20
+FROM node:22
 
 ARG TZ
 ENV TZ="$TZ"
-
-ARG CLAUDE_CODE_VERSION=latest
 
 # Install basic development tools and iptables/ipset
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -25,6 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   jq \
   nano \
   vim \
+  curl \
+  && apt install -y tmux \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure default node user has access to /usr/local/share
@@ -43,8 +43,8 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
 ENV DEVCONTAINER=true
 
 # Create workspace and config directories and set permissions
-RUN mkdir -p /workspace /home/node/.claude && \
-  chown -R node:node /workspace /home/node/.claude
+RUN mkdir -p /workspace && \
+  chown -R node:node /workspace
 
 WORKDIR /workspace
 
@@ -53,6 +53,15 @@ RUN ARCH=$(dpkg --print-architecture) && \
   wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   sudo dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+
+RUN ARCH=$(dpkg --print-architecture) && \
+    apt-get update && apt-get install -y --no-install-recommends zstd && \
+    curl -L -o /tmp/ollama.tar.zst -H "User-Agent: Mozilla/5.0" "https://github.com/ollama/ollama/releases/latest/download/ollama-linux-${ARCH}.tar.zst" && \
+    tar -xf /tmp/ollama.tar.zst -C /usr/local/bin && \
+    rm /tmp/ollama.tar.zst && \
+    apt-get autoremove -y zstd && apt-get clean
+
+ENV PATH=$PATH:/usr/local/bin/bin/
 
 # Set up non-root user
 USER node
@@ -78,13 +87,17 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
   -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
   -x
 
-# Install Claude
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+# Install Pi
+RUN npm install -g @mariozechner/pi-coding-agent
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
+
 USER root
-RUN chmod +x /usr/local/bin/init-firewall.sh && \
+
+RUN sed -i 's/\r$//' /usr/local/bin/init-firewall.sh && \
+  chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
+
 USER node

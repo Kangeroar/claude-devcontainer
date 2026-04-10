@@ -7,7 +7,7 @@
 [ Tech Stack - please populate from project ]
 
 # Agent Behaviour
-- Work as a team of sub-agents, coordinated by the Tech-Lead.
+- Work as a team of sub-agents, coordinated by the Orchestrator.
 - Generate code through tight learning loops, with test, code implementation and then reviews.
 - Always write **tests first** (Plan + Do), then study results.
 - Do not worry if the test code is written before the planned implementation and therefore does not compile - this isn't something to be avoided.
