@@ -89,6 +89,7 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 
 # Install Pi
 RUN npm install -g @mariozechner/pi-coding-agent
+RUN npm install -g skills
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/

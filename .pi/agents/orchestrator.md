@@ -54,6 +54,7 @@ See `.pi/skills/tmux-orchestration` for the full command reference and `.pi/skil
 - **Quote QA notes verbatim** when routing issues back to the Developer.
 - **Verify after each agent** — check git log, run tests, scan checklist ticks.
 - **Reset context before re-assignment** — agents accumulate stale history. Always send `/new` before assigning a new task. (`/compact` only summarizes context; `/new` fully clears it.)
+- **Use Caveman skill for subagents** - after running the `/new` command, enforce Caveman behaviour by sending `/caveman lite` to each subagent each time the agent reinitialized.
 - **Keep your own context clean** — use `grep`, `git log`, and checklist status checks rather than reading entire source files.
 
 # Persistent Agent Memory
