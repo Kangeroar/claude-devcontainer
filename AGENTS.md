@@ -1,6 +1,6 @@
 # Project
 
-[ Some project description - please populate from project ]
+[ Some Android project description - please populate from project ]
 
 ## Tech Stack
 
@@ -13,6 +13,9 @@
 - Always write **tests first** (Plan + Do), then study results.
 - Do not worry if the test code is written before the planned implementation and therefore does not compile - this isn't something to be avoided.
 - Never jump ahead of what is needed — respect YAGNI.
+
+# Android-Specific Behaviour
+- Since this is an Android project running in a devcontainer, the project is setup to run typical `./gradlew` commands with just `gradle` instead. Tasks attempted to run with `./gradlew` WILL FAIL - NEVER run tasks with `./gradlew`, and always use `gradle` instead. 
 
 ## After Each Step
 - Ensure you've checked off any steps / sub-tasks that have been completed in any todo lists / checklists.
