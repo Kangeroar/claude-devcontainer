@@ -63,12 +63,35 @@ while read -r cidr; do
     ipset add allowed-domains "$cidr"
 done < <(echo "$gh_ranges" | jq -r '(.web + .api + .git)[]' | aggregate -q)
 
+# Fetch Fastly IP ranges (used by Maven Central)
+echo "Fetching Fastly IP ranges for Maven Central..."
+fastly_ranges=$(curl -s https://api.fastly.com/public-ip-list)
+if [ -n "$fastly_ranges" ]; then
+    echo "Processing Fastly IPs..."
+    while read -r cidr; do
+        # Basic validation for CIDR format
+        if [[ "$cidr" =~ ^[0-9/.]+$ ]]; then
+            echo "Adding Fastly range $cidr"
+            ipset add allowed-domains "$cidr" -exist
+        fi
+    done < <(echo "$fastly_ranges" | jq -r '.addresses[]')
+else
+    echo "WARNING: Could not fetch Fastly IPs, falling back to DNS resolution only"
+fi
+
 # Resolve and add other allowed domains
 for domain in \
     "registry.npmjs.org" \
     "marketplace.visualstudio.com" \
     "vscode.blob.core.windows.net" \
     "update.code.visualstudio.com" \
+    "deb.debian.org" \
+    "security.debian.org" \
+    "repo.maven.apache.org" \
+    "maven.google.com" \
+    "dl.google.com" \
+    "plugins.gradle.org" \
+    "jcenter.bintray.com" \
     "ollama.com" \
     "fonts.googleapis.com" \
     "fonts.gstatic.com" ; \
@@ -133,4 +156,12 @@ if ! curl --connect-timeout 5 https://api.github.com/zen >/dev/null 2>&1; then
     exit 1
 else
     echo "Firewall verification passed - able to reach https://api.github.com as expected"
+fi
+
+# Verify Maven Central access
+if ! curl --connect-timeout 5 https://repo.maven.apache.org/maven2/ --head >/dev/null 2>&1; then
+    echo "ERROR: Firewall verification failed - unable to reach Maven Central"
+    exit 1
+else
+    echo "Firewall verification passed - able to reach Maven Central"
 fi

@@ -3,6 +3,8 @@ FROM node:22
 ARG TZ
 ENV TZ="$TZ"
 
+RUN dpkg --add-architecture i386
+
 # Install basic development tools and iptables/ipset
 RUN apt-get update && apt-get install -y --no-install-recommends \
   less \
@@ -23,9 +25,75 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   jq \
   nano \
   vim \
+  wget \
   curl \
+  openjdk-21-jdk \
+  libc6:i386 \
+  libncurses6:i386 \
+  libstdc++6:i386 \
+  libz1 \
   && apt install -y tmux \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN curl -L https://services.gradle.org/distributions/gradle-9.1.0-bin.zip -o gradle-9.1.0-bin.zip
+RUN apt-get install -y unzip
+RUN unzip gradle-9.1.0-bin.zip
+RUN /bin/bash -c "source $HOME/.bashrc"
+
+ENV GRADLE_HOME=/gradle-9.1.0
+ENV PATH=$PATH:$GRADLE_HOME/bin
+
+ENV ANDROID_SDK_TOOLS=14742923
+ENV ANDROID_SDK_URL=https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS}_latest.zip
+ENV ANDROID_HOME=/usr/local/android-sdk-linux
+ENV PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/bin
+
+# Set user to root for necessary permissions
+RUN echo 'root:Docker!' | chpasswd
+USER root
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends unzip curl && \
+    mkdir "$ANDROID_HOME" .android && \
+    cd "$ANDROID_HOME" && \
+    curl -o sdk.zip $ANDROID_SDK_URL && \
+    unzip sdk.zip && \
+    rm sdk.zip && \
+# Install Fastlane
+    apt-get install --no-install-recommends -y --allow-unauthenticated build-essential git ruby-full && \
+    gem install rake && \
+    gem install fastlane && \
+    gem install bundler && \
+    gem install screengrab && \
+# Clean up
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    apt-get autoremove -y && \
+    apt-get clean
+
+ENV ANDROID_BUILD_TOOLS_VERSION_34=34.0.0
+ENV ANDROID_VERSION_34=34
+
+# Download Android SDK 34
+RUN yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME && \
+    sdkmanager --update --sdk_root=$ANDROID_HOME && \
+    sdkmanager --sdk_root=$ANDROID_HOME "build-tools;${ANDROID_BUILD_TOOLS_VERSION_34}" \
+    "platforms;android-${ANDROID_VERSION_34}" \
+    "platform-tools" \
+    "extras;android;m2repository" \
+    "extras;google;m2repository"
+
+
+ENV ANDROID_BUILD_TOOLS_VERSION_35=35.0.0
+ENV ANDROID_VERSION_35=35
+
+# Download Android SDK 35
+RUN yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME && \
+    sdkmanager --update --sdk_root=$ANDROID_HOME && \
+    sdkmanager --sdk_root=$ANDROID_HOME "build-tools;${ANDROID_BUILD_TOOLS_VERSION_35}" \
+    "platforms;android-${ANDROID_VERSION_35}" \
+    "platform-tools" \
+    "extras;android;m2repository" \
+    "extras;google;m2repository"
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
