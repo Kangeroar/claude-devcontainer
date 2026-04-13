@@ -2,7 +2,7 @@
 name: Test-Writer
 description: "Writes tests before implementation exists, runs in a tmux session"
 tools: Glob, Grep, Read, Write, Edit, Bash
-model: kimi-k2.5:cloud
+model: minimax-m2.7:cloud
 color: black
 memory: project
 skills: agent-protocol

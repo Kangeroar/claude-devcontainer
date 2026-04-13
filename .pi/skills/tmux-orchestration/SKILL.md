@@ -11,8 +11,8 @@ Everything the Orchestrator needs to create, communicate with, and tear down sub
 
 ```bash
 # Create a session for each subagent role
-tmux new-session -d -s test-writer "ollama launch pi --model kimi-k2.5:cloud"
-tmux new-session -d -s developer   "ollama launch pi --model kimi-k2.5:cloud"
+tmux new-session -d -s test-writer "ollama launch pi --model minimax-m2.7:cloud"
+tmux new-session -d -s developer   "ollama launch pi --model minimax-m2.7:cloud"
 tmux new-session -d -s qa-reviewer "ollama launch pi --model glm-5.1:cloud"
 tmux new-session -d -s work-planner "ollama launch pi --model opus"
 ```
@@ -171,7 +171,7 @@ tmux send-keys -t developer Enter
 
 # If still failing, kill and recreate the session:
 tmux kill-session -t developer
-tmux new-session -d -s developer "ollama launch pi --model kimi-k2.5:cloud"
+tmux new-session -d -s developer "ollama launch pi --model minimax-m2.7:cloud"
 sleep 5
 tmux send-keys -t developer "I'm the Orchestrator. Your task is..."
 tmux send-keys -t developer Enter

@@ -2,7 +2,7 @@
 name: Developer
 description: "Implements minimal code to pass tests, runs in a tmux session"
 tools: Glob, Grep, Read, Write, Edit, Bash
-model: kimi-k2.5:cloud
+model: minimax-m2.7:cloud
 color: green
 memory: project
 skills: agent-protocol

@@ -9,11 +9,11 @@ All agents run in separate **tmux sessions**. The Orchestrator communicates with
 │                  Orchestrator                     │
 │            (main tmux session)                    │
 │                                                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │test-writer│  │developer │  │qa-reviewer│       │
-│  │  session  │  │  session  │  │  session  │        │
-│  │kimi-k2.5  │  │kimi-k2.5 │  │ glm-5.1  │       │
-│  └──────────┘  └──────────┘  └──────────┘       │
+│  ┌────────────┐  ┌────────────┐  ┌───────────┐    │
+│  │test-writer │  │developer   │  │qa-reviewer│    │
+│  │  session   │  │  session   │  │  session  │    │
+│  │minimax-m2.7|  │minimax-m2.7│  │ glm-5.1   │    │
+│  └────────────┘  └────────────┘  └───────────┘    │
 │                                                   │
 │  Communication: tmux send-keys → tmux capture-pane│
 └───────────────────────────────────────────────────┘
@@ -25,8 +25,8 @@ All agents run in separate **tmux sessions**. The Orchestrator communicates with
 |----------------|----------------|--------------------|----------------|
 | **Orchestrator**| (main)         | varies             | Coordinates workflow, creates/resets agent sessions, does not write code |
 | **Work-Planner**| `work-planner`| opus               | Breaks tasks into phased checklists with 3-column tickable steps |
-| **Test-Writer**| `test-writer`  | kimi-k2.5:cloud    | Writes tests before implementation exists |
-| **Developer**  | `developer`    | kimi-k2.5:cloud    | Implements minimal code to pass tests |
+| **Test-Writer**| `test-writer`  | minimax-m2.7:cloud    | Writes tests before implementation exists |
+| **Developer**  | `developer`    | minimax-m2.7:cloud    | Implements minimal code to pass tests |
 | **QA-Reviewer**| `qa-reviewer`  | glm-5.1:cloud      | Reviews tests for robustness, code for quality, ticks off checklist items |
 
 Use a **different model** for QA-Reviewer when possible — an independent perspective catches bugs the implementation model misses.

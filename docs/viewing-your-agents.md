@@ -21,8 +21,8 @@ The Orchestrator and each subagent run in their own tmux session. By "attaching"
 The Orchestrator (or you) must have already created the tmux sessions. If they haven't been created yet, run:
 
 ```bash
-tmux new-session -d -s test-writer "ollama launch pi --model kimi-k2.5:cloud"
-tmux new-session -d -s developer   "ollama launch pi --model kimi-k2.5:cloud"
+tmux new-session -d -s test-writer "ollama launch pi --model minimax-m2.7:cloud"
+tmux new-session -d -s developer   "ollama launch pi --model minimax-m2.7:cloud"
 tmux new-session -d -s qa-reviewer "ollama launch pi --model glm-5.1:cloud"
 ```
 

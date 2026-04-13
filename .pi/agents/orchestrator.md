@@ -30,8 +30,8 @@ tmux new-session -d -s <role> "ollama launch pi --model <model>"
 
 | Role       | Session Name   | Typical Model      |
 |------------|----------------|--------------------|
-| Test-Writer| `test-writer`  | kimi-k2.5:cloud    |
-| Developer  | `developer`    | kimi-k2.5:cloud    |
+| Test-Writer| `test-writer`  | minimax-m2.7:cloud    |
+| Developer  | `developer`    | minimax-m2.7:cloud    |
 | QA-Reviewer| `qa-reviewer`  | glm-5.1:cloud      |
 
 Use a **different model** for QA-Reviewer if possible — independent perspectives catch more bugs.
