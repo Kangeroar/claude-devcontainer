@@ -107,6 +107,21 @@ RUN yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME && \
     "extras;android;m2repository" \
     "extras;google;m2repository"
 
+# ---------------------------------------------------------------------------
+# ARM64 AAPT2 workaround
+# AGP 9.x only ships x86_64 Linux AAPT2, which fails on aarch64 containers
+# (Rosetta cannot translate Linux ELF x86_64 binaries).
+# Download community-built ARM64 AAPT2 from HomuHomu833 and place it where
+# gradle.properties points to via android.aapt2FromMavenOverride.
+# ---------------------------------------------------------------------------
+RUN mkdir -p /home/node/.android-sdk/build-tools && \
+    wget -q "https://github.com/HomuHomu833/android-sdk-custom/releases/download/36.0.0/android-sdk-aarch64-linux-musl.tar.xz" -O /tmp/sdk-arm64.tar.xz && \
+    tar -xJf /tmp/sdk-arm64.tar.xz -C /tmp/ && \
+    cp /tmp/android-sdk/build-tools/36.1.0/aapt2 /home/node/.android-sdk/build-tools/aapt2 && \
+    chmod +x /home/node/.android-sdk/build-tools/aapt2 && \
+    rm -rf /tmp/sdk-arm64.tar.xz /tmp/android-sdk && \
+    chown -R node:node /home/node/.android-sdk
+
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
   chown -R node:node /usr/local/share
