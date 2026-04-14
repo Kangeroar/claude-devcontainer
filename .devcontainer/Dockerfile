@@ -95,6 +95,18 @@ RUN yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME && \
     "extras;android;m2repository" \
     "extras;google;m2repository"
 
+ENV ANDROID_BUILD_TOOLS_VERSION_36=36.0.0
+ENV ANDROID_VERSION_36=36
+
+# Download Android SDK 36
+RUN yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME && \
+    sdkmanager --update --sdk_root=$ANDROID_HOME && \
+    sdkmanager --sdk_root=$ANDROID_HOME "build-tools;${ANDROID_BUILD_TOOLS_VERSION_36}" \
+    "platforms;android-${ANDROID_VERSION_36}" \
+    "platform-tools" \
+    "extras;android;m2repository" \
+    "extras;google;m2repository"
+
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
   chown -R node:node /usr/local/share

@@ -10,12 +10,30 @@ Everything the Orchestrator needs to create, communicate with, and tear down sub
 ## Creating Sessions
 
 ```bash
-# Create a session for each subagent role
-tmux new-session -d -s test-writer "ollama launch pi --model minimax-m2.7:cloud"
-tmux new-session -d -s developer   "ollama launch pi --model minimax-m2.7:cloud"
-tmux new-session -d -s qa-reviewer "ollama launch pi --model glm-5.1:cloud"
-tmux new-session -d -s work-planner "ollama launch pi --model opus"
+# Create a session for each subagent role (always use -y flag for headless launch)
+tmux new-session -d -s test-writer "ollama launch pi --model minimax-m2.7:cloud -y"
+tmux new-session -d -s developer   "ollama launch pi --model minimax-m2.7:cloud -y"
+tmux new-session -d -s qa-reviewer "ollama launch pi --model glm-5.1:cloud -y"
+tmux new-session -d -s work-planner "ollama launch pi --model opus -y"
 ```
+
+### Changing Models Without Recreating Sessions
+
+To switch the model of an existing agent session, use the `/model` command inside the session instead of killing and recreating:
+
+```bash
+# Switch qa-reviewer to glm-5.1:cloud
+tmux send-keys -t qa-reviewer "/model ollama/glm-5.1:cloud"
+tmux send-keys -t qa-reviewer Enter
+sleep 3
+
+# Switch test-writer to minimax-m2.7:cloud
+tmux send-keys -t test-writer "/model ollama/minimax-m2.7:cloud"
+tmux send-keys -t test-writer Enter
+sleep 3
+```
+
+This is faster and preserves session state. Only kill and recreate (`tmux kill-session` + `tmux new-session`) if the session is truly stuck or broken.
 
 ## Verifying Sessions
 
@@ -60,24 +78,39 @@ tmux capture-pane -t qa-reviewer -p -S -500 > /tmp/qa-output.txt
 
 **Always reset context before re-assigning a task.** Agents accumulate stale conversation history that confuses subsequent assignments.
 
-Send `/new` to start a fresh session (this fully clears context and resets the token counter):
+Send `/new` to start a fresh session (this fully clears context and resets the token counter). **Important:** `/new` also resets the model back to the default, so you must immediately re-set the correct model afterwards:
 
 ```bash
 # 1. Cancel any ongoing generation
 tmux send-keys -t developer C-c
 sleep 2
 
-# 2. Start a fresh session (fully resets context)
+# 2. Start a fresh session (fully resets context AND model)
 tmux send-keys -t developer "/new"
 tmux send-keys -t developer Enter
 sleep 3
 
-# 3. Now send the new task
+# 3. Re-set the model (required — /new resets it to default)
+tmux send-keys -t developer "/model ollama/minimax-m2.7:cloud"
+tmux send-keys -t developer Enter
+sleep 3
+
+# 4. Now send the new task
 tmux send-keys -t developer "Your new task..."
 tmux send-keys -t developer Enter
 ```
 
-> **`/new` vs `/compact`:** `/new` starts a completely fresh session, resetting the token counter (X%/203k). `/compact` only summarizes the existing context to save tokens — it does **not** fully clear it. Always use `/new` between tasks.
+### Model assignments per role:
+
+| Role | Command after `/new` |
+|------|---------------------|
+| test-writer | `/model ollama/minimax-m2.7:cloud` |
+| developer | `/model ollama/minimax-m2.7:cloud` |
+| qa-reviewer | `/model ollama/glm-5.1:cloud` |
+
+> **`/new` vs `/compact`:** `/new` starts a completely fresh session, resetting the token counter (X%/203k) AND the model. `/compact` only summarizes the existing context to save tokens — it does **not** fully clear it. Always use `/new` between tasks, then immediately re-set the model.
+>
+> **Why re-setting the model matters:** After `/new`, the session reverts to whatever the default model is (often `glm-5.1:cloud`). If you forget to re-set, your QA reviewer might end up running on the test-writer model, or vice versa — breaking the independent-perspective principle for QA.
 
 ## Detecting Completion
 
@@ -169,12 +202,17 @@ sleep 3
 tmux send-keys -t developer "More detailed instruction..."
 tmux send-keys -t developer Enter
 
-# If still failing, kill and recreate the session:
+# If still failing, kill and recreate the session (always use -y flag):
 tmux kill-session -t developer
-tmux new-session -d -s developer "ollama launch pi --model minimax-m2.7:cloud"
+tmux new-session -d -s developer "ollama launch pi --model minimax-m2.7:cloud -y"
 sleep 5
 tmux send-keys -t developer "I'm the Orchestrator. Your task is..."
 tmux send-keys -t developer Enter
+
+# To just change the model without recreating the session:
+tmux send-keys -t developer "/model ollama/minimax-m2.7:cloud"
+tmux send-keys -t developer Enter
+sleep 3
 ```
 
 ## Tearing Down Sessions
