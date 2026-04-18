@@ -1,5 +1,6 @@
-# Claude
+# Claude and Pi
 .claude/agent-memory/**/*
+.pi/agent-memory/**/*
 **/*.pyc
 
 # DS_Store
