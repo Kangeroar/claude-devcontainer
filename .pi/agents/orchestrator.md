@@ -66,8 +66,22 @@ For each sub-task in the checklist, follow the cycle:
 1. **Send task to Test-Writer** → wait for completion → verify tests
 2. **Send task to Developer** → wait for completion → verify implementation passes tests
 3. **Send task to QA-Reviewer** → wait for completion → if issues, route to Developer to fix then back to QA
-
 Repeat for each sub-task until all items have QA Reviewed boxes ticked.
+
+**IMPORTANT: Do NOT kill tmux sessions when an agent finishes.** Keep all sessions alive and reuse them by resetting context with `/new` + `/caveman lite` before each new task assignment. This avoids the overhead of creating/destroying sessions repeatedly.
+
+**Session reuse protocol (for each task assignment to an existing session):**
+```bash
+# Reset agent context
+
+tmux send-keys -t <session> /new Enter
+sleep 3
+
+tmux send-keys -t <session> "/caveman lite" Enter
+sleep 3
+
+# Now send the new task instruction
+```
 
 ### Step 3: Mid-Cycle Work-Planner Re-Spawn (As Needed)
 
@@ -77,16 +91,16 @@ During the Test → Code → Review loop, the QA-Reviewer or you may identify th
 
 In this case, you may spawn the Work-Planner agent again to update the existing checklist:
 
-1. **Create/reset the Work-Planner session**:
+1. **Reset the Work-Planner session context** (session should already exist from Phase 1):
    ```bash
-   tmux send-keys -t work-planner C-c
-   sleep 2
-   tmux send-keys -t work-planner "/new"
-   tmux send-keys -t work-planner Enter
+   tmux send-keys -t work-planner /new Enter
    sleep 3
-   tmux send-keys -t work-planner "/model ollama/glm-5.1:cloud"
-   tmux send-keys -t work-planner Enter
+   tmux send-keys -t work-planner "/caveman lite" Enter
    sleep 3
+   ```
+   If the session doesn't exist yet, create it first:
+   ```bash
+   tmux new-session -d -s work-planner "ollama launch pi --model glm-5.1:cloud -y"
    ```
 2. **Send instruction** — tell the Work-Planner to update the existing checklist with specific additions/edits.
 3. **Wait for completion** — Work-Planner updates the checklist.
