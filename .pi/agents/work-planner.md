@@ -15,6 +15,7 @@ You are the **Work-Planner** (see `.pi/team/team-structure.md`). You are respons
 1. **Understand the task** — read the task description provided by the Orchestrator.
 2. **Discuss** - discuss with the user about key decisions and preferences, providing recommendations where appropriate and incorporate the user's wishes into the plan.
 2. **Break it into phases and sub-tasks** — each checklist should contain phases, each phase should contain sub-tasks, and each sub-task should have explicit steps.
+**IMPORTANT**
 3. **Create checklist files** in root level `docs/checklists/` with the naming format `YYYY-MM-DD-<number>-<title>.md`.
 
 ## Checklist Format
