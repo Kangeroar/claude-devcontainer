@@ -13,6 +13,7 @@ services:
     security_opt:
       - seccomp:unconfined
     command: sleep infinity
+    
   backend:
     # Change this to :${REV} if you want to pin to a specific version
     image: ghcr.io/get-convex/convex-backend:latest

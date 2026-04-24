@@ -40,44 +40,48 @@
 
 **IMPORTANT:** The Orchestrator does NOT write code, edit code, or investigate/debug issues. All implementation and investigation is delegated to the appropriate subagent (primarily Developer).
 
-### Phase 1: Initial Planning (Required First Step)
+### Phase 0: Planning (Completed First, Before Orchestration Starts)
 
-1. User provides task description to Orchestrator
-2. Orchestrator spawns **Work-Planner** with the task description
-3. Work-Planner discusses with user about key decisions and preferences
-4. Work-Planner creates structured TODO checklist files in `docs/checklists/`
-5. Work-Planner completes their work and signals Orchestrator
-6. Orchestrator de-spawns Work-Planner
+The **Work-Planner** runs independently **before** the Orchestrator workflow begins. This phase is complete when a checklist exists.
 
-### Phase 2: Checklist Execution Loop (Repeats for Each Sub-Task)
+1. Work-Planner receives the task description
+2. Work-Planner discusses with user about key decisions and preferences
+3. Work-Planner creates structured TODO checklist files in `docs/checklists/`
+4. Work-Planner signals completion — checklist is ready
 
-7. Orchestrator spawns **Test-Writer**
-8. Test-Writer reads in-progress TODO checklists, finds next task with un-ticked "Test Written" box, and writes tests
-9. Once tests are written, Test-Writer ticks the "Test Written" box for that task and informs Orchestrator that work is finished
-10. Orchestrator de-spawns Test-Writer
-11. Orchestrator spawns **Developer**
-12. Developer reads in-progress TODO checklists, finds next task ticked with "Test Written" but un-ticked "Code Implemented" box, and performs developer work to implement code
-13. Once the code is implemented, Developer ticks the "Code Implemented" box, and informs Orchestrator that work is finished
-14. Orchestrator de-spawns Developer
-15. Orchestrator spawns **QA-Reviewer**
-16. QA-Reviewer reads in-progress TODO checklists, finds next task ticked with "Test Written" and "Code Implemented" but un-ticked "QA Reviewed", and reviews tests and code implementation
-17. When QA-Reviewer finishes with review:
+> **The Orchestrator workflow below assumes a checklist already exists.** Do not proceed if there is not a clear checklist to orchestrate work around.
+
+### Phase 1: Checklist Execution Loop (Repeats for Each Sub-Task)
+
+**The cycle always starts with Test-Writer.** For each sub-task in the checklist:
+
+1. Orchestrator spawns **Test-Writer**
+2. Test-Writer reads in-progress TODO checklists, finds next task with un-ticked "Test Written" box, and writes tests
+3. Once tests are written, Test-Writer ticks the "Test Written" box for that task and informs Orchestrator that work is finished
+4. Orchestrator de-spawns Test-Writer
+5. Orchestrator spawns **Developer**
+6. Developer reads in-progress TODO checklists, finds next task ticked with "Test Written" but un-ticked "Code Implemented" box, and performs developer work to implement code
+7. Once the code is implemented, Developer ticks the "Code Implemented" box, and informs Orchestrator that work is finished
+8. Orchestrator de-spawns Developer
+9. Orchestrator spawns **QA-Reviewer**
+10. QA-Reviewer reads in-progress TODO checklists, finds next task ticked with "Test Written" and "Code Implemented" but un-ticked "QA Reviewed", and reviews tests and code implementation
+11. When QA-Reviewer finishes with review:
     - If there are changes to be made, QA-Reviewer should untick either the "Test Written" box or the "Code Implemented" box (as appropriate) and add to the checklist with more details.
     - If the tests and code implementations look good, then QA-Reviewer ticks the "QA Reviewed" box.
     - QA-Reviewer signals Orchestrator that review is finished
-18. Orchestrator de-spawns QA-Reviewer
+12. Orchestrator de-spawns QA-Reviewer
 
-**IMPORTANT** Repeat steps (7) - (18) until entire TODO checklist is completed.
+**IMPORTANT** Repeat steps (1) - (12) until entire TODO checklist is completed.
 
-### Phase 3: Mid-Cycle Planning Updates (As Needed)
+### Phase 2: Mid-Cycle Planning Updates (As Needed)
 
-If during Phase 2, the QA-Reviewer or Orchestrator identifies that:
+If during Phase 1, the QA-Reviewer or Orchestrator identifies that:
 - A large piece of work is missing from the checklist
 - A significant chunk of the checklist needs updates or additions
 
 Then:
-19. Orchestrator spawns **Work-Planner** to update the existing checklist with additions or edits
-20. Work-Planner updates the checklist with the required changes
-21. Work-Planner signals Orchestrator that work is finished
-22. Orchestrator de-spawns Work-Planner
-23. Resume Phase 2 from where it left off (or from the appropriate sub-task in the updated checklist)
+13. Orchestrator spawns **Work-Planner** to update the existing checklist with additions or edits
+14. Work-Planner updates the checklist with the required changes
+15. Work-Planner signals Orchestrator that work is finished
+16. Orchestrator de-spawns Work-Planner
+17. Resume Phase 1 from where it left off (or from the appropriate sub-task in the updated checklist)

@@ -10,11 +10,13 @@ Everything the Orchestrator needs to create, communicate with, and tear down sub
 ## Workflow Overview
 
 The workflow has three phases:
-1. **Initial Planning** (Step 0) — Work-Planner creates the checklist (REQUIRED first step)
-2. **Checklist Execution** (Steps 1-3) — Test → Code → Review loop for each sub-task
+1. **Planning Phase** (runs first, before Orchestrator starts) — Work-Planner creates the checklist
+2. **Checklist Execution** (Steps 1-3) — Test → Code → Review loop for each sub-task (always starts with Test-Writer)
 3. **Mid-Cycle Planning Updates** (Step 4) — Work-Planner re-spawned as needed
 
 **Critical:** The Orchestrator does NOT write code or investigate/debug issues. All implementation and investigation is delegated to the appropriate subagent (primarily Developer).
+
+**Important: The Orchestrator workflow assumes a checklist already exists.** The Work-Planner completes before the Orchestrator begins. The first step of the orchestration loop is always to spawn the Test-Writer.
 
 ## Creating Sessions
 
@@ -23,7 +25,7 @@ The workflow has three phases:
 tmux new-session -d -s work-planner "ollama launch pi --model glm-5.1:cloud -y"
 tmux new-session -d -s test-writer "ollama launch pi --model minimax-m2.7:cloud -y"
 tmux new-session -d -s developer   "ollama launch pi --model minimax-m2.7:cloud -y"
-tmux new-session -d -s qa-reviewer "ollama launch pi --model glm-5.1:cloud -y"
+tmux new-session -d -s qa-reviewer "ollama launch pi --model kimi-k2.6:cloud -y"
 ```
 
 ### Changing Models Without Recreating Sessions
@@ -31,8 +33,8 @@ tmux new-session -d -s qa-reviewer "ollama launch pi --model glm-5.1:cloud -y"
 To switch the model of an existing agent session, use the `/model` command inside the session instead of killing and recreating:
 
 ```bash
-# Switch qa-reviewer to glm-5.1:cloud
-tmux send-keys -t qa-reviewer "/model ollama/glm-5.1:cloud"
+# Switch qa-reviewer to kimi-k2.6:cloud
+tmux send-keys -t qa-reviewer "/model ollama/kimi-k2.6:cloud"
 tmux send-keys -t qa-reviewer Enter
 sleep 3
 
@@ -58,8 +60,9 @@ tmux list-sessions
 tmux send-keys -t test-writer "Your instruction here"
 tmux send-keys -t test-writer Enter
 
-# Multi-line instruction (use literal newlines)
-tmux send-keys -t developer "I'm the Orchestrator. Implement Sub-task 2.1 from docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md. Read tests first at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests, tick Code Implemented boxes, commit, let me know when done."
+# Example multi-line instruction (use literal newlines)
+# Make sure to tailor to each of developer, test-writer and qa-reviewer
+tmux send-keys -t developer "You are the developer agent, with agent description in `.pi/agents/developer.md`. Implement Sub-task 2.1 from docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md. Read tests first at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests, tick Code Implemented boxes, commit, let me know when done."
 tmux send-keys -t developer Enter
 ```
 
@@ -116,7 +119,7 @@ tmux send-keys -t developer Enter
 | work-planner | `/model ollama/glm-5.1:cloud` |
 | test-writer | `/model ollama/minimax-m2.7:cloud` |
 | developer | `/model ollama/minimax-m2.7:cloud` |
-| qa-reviewer | `/model ollama/glm-5.1:cloud` |
+| qa-reviewer | `/model ollama/kimi-k2.6:cloud` |
 
 > **`/new` vs `/compact`:** `/new` starts a completely fresh session, resetting the token counter (X%/203k) AND the model. `/compact` only summarizes the existing context to save tokens — it does **not** fully clear it. Always use `/new` between tasks, then immediately re-set the model.
 >
@@ -240,35 +243,20 @@ tmux kill-session -t qa-reviewer
 
 ## Full Cycle Example
 
-### Step 0: Work-Planner (Required First Step)
+### Assumed Work Completed
+
+Assumes Work-Planner agent has already run a checklist has been completed. This should be
+information provided to the Orchestrator agent to orchestrate subagents around.
+
+### Steps 1-3: Test → Code → Review Loop (Orchestrator Starts Here)
 
 ```bash
-# Create and launch work-planner
-tmux new-session -d -s work-planner "ollama launch pi --model glm-5.1:cloud -y"
-sleep 5
-
-# Send task description
-tmux send-keys -t work-planner "I'm the Orchestrator. Create a TODO checklist for:
-[USER'S TASK DESCRIPTION]. Create checklists in docs/checklists/. Discuss with user
-about key decisions. Let me know when done."
-tmux send-keys -t work-planner Enter
-
-sleep 120 && tmux capture-pane -t work-planner -p -S -50
-# Verify: ls docs/checklists/, grep -c "\[ \]" docs/checklists/*.md
-
-# De-spawn after checklist is created
-tmux kill-session -t work-planner
-```
-
-### Steps 1-3: Test → Code → Review Loop
-
-```bash
-# ── TEST-WRITER ──
+# ── TEST-WRITER (First step in the orchestration loop) ──
 tmux send-keys -t test-writer C-c; sleep 2
 tmux send-keys -t test-writer "/new"; tmux send-keys -t test-writer Enter; sleep 3
 tmux send-keys -t test-writer "/model ollama/minimax-m2.7:cloud"
 tmux send-keys -t test-writer Enter; sleep 3
-tmux send-keys -t test-writer "Write tests for Sub-task 2.1 from docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md. Add tests to output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Tick Tests Written boxes. Commit. Let me know when done."
+tmux send-keys -t test-writer "Write tests for Sub-task 1.1 from docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md. Add tests to output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Tick Tests Written boxes. Commit. Let me know when done."
 tmux send-keys -t test-writer Enter
 sleep 90 && tmux capture-pane -t test-writer -p -S -30
 # Verify: check test file, git log, checklist ticks
@@ -278,7 +266,7 @@ tmux send-keys -t developer C-c; sleep 2
 tmux send-keys -t developer "/new"; tmux send-keys -t developer Enter; sleep 3
 tmux send-keys -t developer "/model ollama/minimax-m2.7:cloud"
 tmux send-keys -t developer Enter; sleep 3
-tmux send-keys -t developer "Implement Sub-task 2.1. Read tests first at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests. Tick Code Implemented boxes. Commit. Let me know when done."
+tmux send-keys -t developer "Implement Sub-task 1.1. Read tests first at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests. Tick Code Implemented boxes. Commit. Let me know when done."
 tmux send-keys -t developer Enter
 sleep 120 && tmux capture-pane -t developer -p -S -30
 # Verify: run tests, git log, checklist ticks
@@ -286,9 +274,9 @@ sleep 120 && tmux capture-pane -t developer -p -S -30
 # ── QA-REVIEWER ──
 tmux send-keys -t qa-reviewer C-c; sleep 2
 tmux send-keys -t qa-reviewer "/new"; tmux send-keys -t qa-reviewer Enter; sleep 3
-tmux send-keys -t qa-reviewer "/model ollama/glm-5.1:cloud"
+tmux send-keys -t qa-reviewer "/model ollama/kimi-k2.6:cloud"
 tmux send-keys -t qa-reviewer Enter; sleep 3
-tmux send-keys -t qa-reviewer "Review Sub-task 2.1. Tests at output/frontend/__tests__/carousel-autoscroll-progress.test.ts, code at output/frontend/src/components/Carousel.tsx. Run tests. Tick QA Reviewed boxes. Let me know when done."
+tmux send-keys -t qa-reviewer "Review Sub-task 1.1. Tests at output/frontend/__tests__/carousel-autoscroll-progress.test.ts, code at output/frontend/src/components/Carousel.tsx. Run tests. Tick QA Reviewed boxes. Let me know when done."
 tmux send-keys -t qa-reviewer Enter
 sleep 120 && tmux capture-pane -t qa-reviewer -p -S -30
 # If QA approves → next sub-task. If QA flags issues → route to Developer, then back to QA.

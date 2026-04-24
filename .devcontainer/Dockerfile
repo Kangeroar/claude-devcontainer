@@ -99,6 +99,9 @@ RUN npm install -g @mariozechner/pi-coding-agent
 RUN npm install -g playwright
 RUN npx playwright install chromium
 
+# Install Convex
+RUN npm install -g convex
+
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
 

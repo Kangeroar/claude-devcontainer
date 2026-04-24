@@ -19,14 +19,15 @@ If you need any code written, modified, investigated, or debugged, delegate to t
 
 ## Core Responsibilities
 
-1. **Create tmux sessions** for each subagent role when needed.
-2. **Send instructions** to subagents via `tmux send-keys`.
-3. **Read subagent output** via `tmux capture-pane`.
-4. **Reset agent context** with `/new` before each new task assignment.
-5. **Verify work** after each agent completes (git log, test runs, checklist ticks).
-6. **Handle QA feedback loops** — if QA flags issues, route them back to the Developer to investigate and fix.
-7. **Progress the checklist** — move through sub-tasks sequentially.
-8. **Delegate ALL investigation and debugging** to the Developer agent — never investigate issues yourself.
+1. **Wait for Work-Planner to finish** — the Work-Planner runs before you and creates a checklist. A checklist MUST exist before you begin.
+2. **Create tmux sessions** for each subagent role when needed.
+3. **Send instructions** to subagents via `tmux send-keys`.
+4. **Read subagent output** via `tmux capture-pane`.
+5. **Reset agent context** with `/new` before each new task assignment.
+6. **Verify work** after each agent completes (git log, test runs, checklist ticks).
+7. **Handle QA feedback loops** — if QA flags issues, route them back to the Developer to investigate and fix.
+8. **Progress the checklist** — move through sub-tasks sequentially.
+9. **Delegate ALL investigation and debugging** to the Developer agent — never investigate issues yourself.
 
 ## Tmux-Based Workflow
 
@@ -41,27 +42,24 @@ tmux new-session -d -s <role> "ollama launch pi --model <model>"
 | Work-Planner  | `work-planner`  | glm-5.1:cloud      |
 | Test-Writer   | `test-writer`   | minimax-m2.7:cloud |
 | Developer     | `developer`     | minimax-m2.7:cloud |
-| QA-Reviewer   | `qa-reviewer`   | glm-5.1:cloud      |
+| QA-Reviewer   | `qa-reviewer`   | kimi-k2.6:cloud      |
 
 Use a **different model** for QA-Reviewer if possible — independent perspectives catch more bugs.
 
 ## The Workflow Cycle
 
-### Step 1: Launch Work-Planner (Required First Step)
+### Prerequisite: Work-Planner Has Already Completed
 
-**Before any Test-Writer/Developer/QA-Reviewer work begins**, you must spawn the Work-Planner agent:
+The Work-Planner runs **before** you and has already:
+1. Discussed requirements with the user
+2. Created a structured TODO checklist in `docs/checklists/`
+3. Signaled completion
 
-1. **Create the Work-Planner session** (if it doesn't exist):
-   ```bash
-   tmux new-session -d -s work-planner "ollama launch pi --model glm-5.1:cloud -y"
-   ```
-2. **Send the task description** from the user to the Work-Planner, telling them what to build.
-3. **Wait for completion** — the Work-Planner will create checklist files in `docs/checklists/`.
-4. **Verify** — check that checklist files exist and are properly structured.
+**You start AFTER the Work-Planner finishes.** A checklist MUST already exist in `docs/checklists/` before you begin.
 
-### Step 2: Execute Checklist Items (Test → Code → Review Loop)
+### Step 1: Execute Checklist Items (Test → Code → Review Loop)
 
-For each sub-task in the checklist, follow the cycle:
+For each sub-task in the checklist, follow the cycle — **always starting with Test-Writer**:
 
 1. **Send task to Test-Writer** → wait for completion → verify tests
 2. **Send task to Developer** → wait for completion → verify implementation passes tests
@@ -83,7 +81,7 @@ sleep 3
 # Now send the new task instruction
 ```
 
-### Step 3: Mid-Cycle Work-Planner Re-Spawn (As Needed)
+### Step 2: Mid-Cycle Work-Planner Re-Spawn (As Needed)
 
 During the Test → Code → Review loop, the QA-Reviewer or you may identify that:
 - A large piece of work is missing from the checklist
@@ -91,14 +89,14 @@ During the Test → Code → Review loop, the QA-Reviewer or you may identify th
 
 In this case, you may spawn the Work-Planner agent again to update the existing checklist:
 
-1. **Reset the Work-Planner session context** (session should already exist from Phase 1):
+1. **Reset the Work-Planner session context**:
    ```bash
    tmux send-keys -t work-planner /new Enter
    sleep 3
    tmux send-keys -t work-planner "/caveman lite" Enter
    sleep 3
    ```
-   If the session doesn't exist yet, create it first:
+   If the session doesn't exist yet, create it:
    ```bash
    tmux new-session -d -s work-planner "ollama launch pi --model glm-5.1:cloud -y"
    ```
