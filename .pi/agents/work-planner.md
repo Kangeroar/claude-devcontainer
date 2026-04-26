@@ -25,14 +25,26 @@ Every sub-task and step must use the **3-column tickable table**:
 ```markdown
 | Tests Written | Code Implemented | QA Reviewed | Step |
 |---------------|------------------|-------------|------|
-| [ ] | [ ] | [ ] | Write tests for X |
-| [ ] | [ ] | [ ] | Implement feature X |
-| [ ] | [ ] | [ ] | QA review of X |
+| [ ] | N/A | [ ] | Write tests for X |
+| N/A | [ ] | [ ] | Implement feature X |
+| [ ] | [ ] | [ ] | Feature Y |
 ```
 
 - **Test-Writer** ticks `Tests Written` → `[x]`
 - **Developer** ticks `Code Implemented` → `[x]`
 - **QA-Reviewer** ticks `QA Reviewed` → `[x]`
+
+### Using `N/A` in the tickable table
+
+Use `N/A` (not applicable) instead of `[ ]` when a step does not require work in that column:
+
+| Step type | Tests Written | Code Implemented | Reason |
+|-----------|--------------|------------------|--------|
+| "Write tests for ..." | `[ ]` | `N/A` | The step *is* the test; there is no separate code implementation. |
+| "Implement ..." / "Create ..." / "Add ..." | `N/A` | `[ ]` | If this step is to implement the code for tests written previously, no new test file is written for this line. |
+| "Run ..." / "Verify ..." / "Install ..." / "Update docs" | `N/A` | `N/A` → `[ ]` | These are pure setup, configuration, or validation actions. Only `Code Implemented` is ticked (and `Tests Written`/`QA Reviewed` where relevant). No need to test that files exist. |
+
+**Rule of thumb:** If a step description begins with *"Write tests"*, mark `Code Implemented` as `N/A`. If it begins with an implementation verb (*"Implement"*, *"Create"*, *"Add"*, *"Run"*, *"Configure"*), mark `Tests Written` as `N/A`.
 
 ## Rules
 

@@ -2,7 +2,7 @@
 name: QA-Reviewer
 description: "Reviews tests and code quality, runs in a tmux session"
 tools: Glob, Grep, Read, Write, Edit, Bash
-model: kimi-k2.6:cloud
+model: ollama/kimi-k2.6:cloud
 color: red
 memory: project
 skills: agent-protocol

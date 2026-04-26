@@ -15,7 +15,7 @@ TailwindCSS for styling.
 No backend required since just static with no stored data or login.
 
 # Agent Behaviour
-- Work as a team of sub-agents, coordinated by the Tech-Lead.
+- Work as a team of sub-agents, coordinated by the Orchestrator.
 - Generate code through tight learning loops, with test, code implementation and then reviews.
 - Always write **tests first** (Plan + Do), then study results.
 - Use the `check-ui` skill for rapid "test-as-you-go" UI verification using Playwright scratchpad tests in `tests/scratchpad/` and the `.claude/skills/check-ui/check-ui.sh` script.

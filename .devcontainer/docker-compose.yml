@@ -1,8 +1,12 @@
 services:
-  devcontainer: 
-    build: 
+  devcontainer-banknotetrading-frontend:
+    build:
       context: .
       dockerfile: Dockerfile
+      args:
+        TZ: "${TZ:-Europe/London}"
+        GIT_DELTA_VERSION: "${GIT_DELTA_VERSION:-0.18.2}"
+        ZSH_IN_DOCKER_VERSION: "${ZSH_IN_DOCKER_VERSION:-1.2.0}"
     volumes:
       - ..:/workspace:cached
     network_mode: service:backend
@@ -11,9 +15,12 @@ services:
       - NET_RAW
       - SYS_ADMIN
     security_opt:
-      - seccomp:unconfined
+      - seccomp=unconfined
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - POWERLEVEL9K_DISABLE_GITSTATUS=true
     command: sleep infinity
-    
+
   backend:
     # Change this to :${REV} if you want to pin to a specific version
     image: ghcr.io/get-convex/convex-backend:latest
@@ -33,7 +40,6 @@ services:
       - AWS_ACCESS_KEY_ID
       - AWS_REGION
       - AWS_S3_DISABLE_CHECKSUMS
-      - AWS_S3_DISABLE_SSE
       - AWS_S3_FORCE_PATH_STYLE
       - AWS_SECRET_ACCESS_KEY
       - AWS_SESSION_TOKEN
@@ -80,4 +86,6 @@ services:
         condition: service_healthy
 
 volumes:
+  claude-code-bashhistory:
+  claude-code-config:
   data:
