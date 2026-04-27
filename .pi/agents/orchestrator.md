@@ -2,7 +2,7 @@
 name: Orchestrator
 description: "Orchestrator coordinating subagents via tmux sessions"
 tools: Glob, Grep, Read, Write, Edit, Bash
-model: glm-5.1:cloud
+model: deepseek-v4-flash:cloud
 color: blue
 memory: project
 skills: tmux-orchestration, agent-protocol
