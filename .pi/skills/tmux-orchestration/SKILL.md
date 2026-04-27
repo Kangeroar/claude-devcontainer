@@ -9,10 +9,15 @@ Everything the Orchestrator needs to create, communicate with, and tear down sub
 
 ## Workflow Overview
 
-The workflow has three phases:
+The workflow has three phases per feature:
 1. **Planning Phase** (runs first, before Orchestrator starts) — Work-Planner creates the checklist
-2. **Checklist Execution** (Steps 1-3) — Test → Code → Review loop for each sub-task (always starts with Test-Writer)
-3. **Mid-Cycle Planning Updates** (Step 4) — Work-Planner re-spawned as needed
+2. **Checklist Execution** — For each feature: Test table rows → Code table rows → Final Review table rows
+3. **Mid-Cycle Planning Updates** — Work-Planner re-spawned as needed for large structural changes
+
+**Within each feature, the subtables are processed in order:**
+- `#### Test` table: each row → Test-Writer writes test → QA-Reviewer reviews
+- `#### Code` table: each row → Developer implements → QA-Reviewer reviews
+- `#### Final Review` table: each row → QA-Reviewer verifies
 
 **Critical:** The Orchestrator does NOT write code or investigate/debug issues. All implementation and investigation is delegated to the appropriate subagent (primarily Developer).
 
@@ -62,7 +67,7 @@ tmux send-keys -t test-writer Enter
 
 # Example multi-line instruction (use literal newlines)
 # Make sure to tailor to each of developer, test-writer and qa-reviewer
-tmux send-keys -t developer "You are the developer agent, with agent description in `.pi/agents/developer.md`. Implement Sub-task 2.1 from docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md. Read tests first at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests, tick Code Implemented boxes, commit, let me know when done."
+tmux send-keys -t developer "You are the developer agent, with agent description in `.pi/agents/developer.md`. Implement feature 1.1 from the #### Code table in docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md. Specifically: 'Add sortColumn and sortDirection state to BanknoteListPage'. Read tests first at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests, tick Implemented box, commit, let me know when done."
 tmux send-keys -t developer Enter
 ```
 
@@ -170,6 +175,11 @@ npx jest __tests__/carousel-autoscroll-progress.test.ts --verbose
 # Check which checklist boxes are ticked
 grep "\[x\]" docs/checklists/YYYY-MM-DD-N-title.md
 grep "\[ \]" docs/checklists/YYYY-MM-DD-N-title.md
+
+# Check specific subsection progress
+grep -A 20 "#### Test" docs/checklists/YYYY-MM-DD-N-title.md | grep -E "\[x\]|\[ \]"
+grep -A 20 "#### Code" docs/checklists/YYYY-MM-DD-N-title.md | grep -E "\[x\]|\[ \]"
+grep -A 20 "#### Final Review" docs/checklists/YYYY-MM-DD-N-title.md | grep -E "\[x\]|\[ \]"
 ```
 
 ## Handling QA Feedback Loops
@@ -186,7 +196,7 @@ sleep 2
 tmux send-keys -t developer "/new"
 tmux send-keys -t developer Enter
 sleep 3
-tmux send-keys -t developer "Quick fix from QA review: var(--color-buttonLight-border) doesn't work in Tailwind v3. Change to theme('colors.buttonLight.border'). Also update test regex if needed. Run tests, tick Code Implemented, commit, let me know when done."
+tmux send-keys -t developer "Quick fix from QA review: var(--color-buttonLight-border) doesn't work in Tailwind v3. Change to theme('colors.buttonLight.border'). Also update test regex if needed. Run tests, tick Implemented in the Code table row, commit, let me know when done."
 tmux send-keys -t developer Enter
 
 # 3. After Developer fixes, clear QA context and send re-review
@@ -195,7 +205,7 @@ sleep 2
 tmux send-keys -t qa-reviewer "/new"
 tmux send-keys -t qa-reviewer Enter
 sleep 3
-tmux send-keys -t qa-reviewer "Re-review: Developer fixed the var(--color-buttonLight-border) issue. Verify the fix at <file>. Run tests, tick QA Reviewed, let me know when done."
+tmux send-keys -t qa-reviewer "Re-review: Developer fixed the var(--color-buttonLight-border) issue. Verify the fix at <file>. Run tests, tick QA Reviewed in the Code table row, let me know when done."
 tmux send-keys -t qa-reviewer Enter
 ```
 
@@ -245,55 +255,112 @@ tmux kill-session -t qa-reviewer
 
 ### Assumed Work Completed
 
-Assumes Work-Planner agent has already run a checklist has been completed. This should be
-information provided to the Orchestrator agent to orchestrate subagents around.
+Assumes Work-Planner agent has already created a checklist like this:
 
-### Steps 1-3: Test → Code → Review Loop (Orchestrator Starts Here)
+```markdown
+### Feature 1.1: Carousel Autoscroll Progress Bar
+
+#### Test
+
+| Implemented | QA Reviewed | Description |
+|-------------|-------------|-------------|
+| [ ] | [ ] | Write test: progress bar fills as autoscroll timer advances |
+| [ ] | [ ] | Write test: progress bar resets when user interacts (click/hover) |
+| [ ] | [ ] | Write test: progress bar completes fill when autoscroll reaches end |
+
+#### Code
+
+| Implemented | QA Reviewed | Description |
+|-------------|-------------|-------------|
+| [ ] | [ ] | Implement progress bar component with animated fill |
+| [ ] | [ ] | Wire progress bar to autoscroll timer state |
+| [ ] | [ ] | Add reset behavior on user interaction |
+
+#### Final Review
+
+| QA Reviewed | Description |
+|-------------|-------------|
+| [ ] | Verify all 3 tests pass |
+| [ ] | Visual check: progress bar animates smoothly |
+| [ ] | Run scratchpad UI test for visual regression |
+```
+
+### Phase A: Test Table (Row by Row)
 
 ```bash
-# ── TEST-WRITER (First step in the orchestration loop) ──
+# ── TEST-WRITER: Row 1 of Test table ──
 tmux send-keys -t test-writer C-c; sleep 2
 tmux send-keys -t test-writer "/new"; tmux send-keys -t test-writer Enter; sleep 3
 tmux send-keys -t test-writer "/model ollama/minimax-m2.7:cloud"
 tmux send-keys -t test-writer Enter; sleep 3
-tmux send-keys -t test-writer "Write tests for Sub-task 1.1 from docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md. Add tests to output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Tick Tests Written boxes. Commit. Let me know when done."
+tmux send-keys -t test-writer "From Feature 1.1 Test table row 1 in docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md: write test for 'progress bar fills as autoscroll timer advances'. Add to output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Tick Implemented for that row. Commit. Let me know when done."
 tmux send-keys -t test-writer Enter
 sleep 90 && tmux capture-pane -t test-writer -p -S -30
-# Verify: check test file, git log, checklist ticks
 
-# ── DEVELOPER ──
-tmux send-keys -t developer C-c; sleep 2
-tmux send-keys -t developer "/new"; tmux send-keys -t developer Enter; sleep 3
-tmux send-keys -t developer "/model ollama/minimax-m2.7:cloud"
-tmux send-keys -t developer Enter; sleep 3
-tmux send-keys -t developer "Implement Sub-task 1.1. Read tests first at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests. Tick Code Implemented boxes. Commit. Let me know when done."
-tmux send-keys -t developer Enter
-sleep 120 && tmux capture-pane -t developer -p -S -30
-# Verify: run tests, git log, checklist ticks
-
-# ── QA-REVIEWER ──
+# ── QA-REVIEWER: Row 1 of Test table ──
 tmux send-keys -t qa-reviewer C-c; sleep 2
 tmux send-keys -t qa-reviewer "/new"; tmux send-keys -t qa-reviewer Enter; sleep 3
 tmux send-keys -t qa-reviewer "/model ollama/kimi-k2.6:cloud"
 tmux send-keys -t qa-reviewer Enter; sleep 3
-tmux send-keys -t qa-reviewer "Review Sub-task 1.1. Tests at output/frontend/__tests__/carousel-autoscroll-progress.test.ts, code at output/frontend/src/components/Carousel.tsx. Run tests. Tick QA Reviewed boxes. Let me know when done."
+tmux send-keys -t qa-reviewer "Review Feature 1.1 Test table row 1: test at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests. Tick QA Reviewed for that row. Let me know when done."
 tmux send-keys -t qa-reviewer Enter
-sleep 120 && tmux capture-pane -t qa-reviewer -p -S -30
-# If QA approves → next sub-task. If QA flags issues → route to Developer, then back to QA.
+sleep 60 && tmux capture-pane -t qa-reviewer -p -S -30
+
+# ── Repeat for Test table rows 2, 3 ──
+# (same pattern as above for each remaining Test row)
 ```
 
-### Step 4: Mid-Cycle Work-Planner Re-Spawn (As Needed)
+### Phase B: Code Table (Row by Row)
 
 ```bash
-# Example: QA identified that "Add keyboard navigation" is missing from checklist
+# ── DEVELOPER: Row 1 of Code table ──
+tmux send-keys -t developer C-c; sleep 2
+tmux send-keys -t developer "/new"; tmux send-keys -t developer Enter; sleep 3
+tmux send-keys -t developer "/model ollama/minimax-m2.7:cloud"
+tmux send-keys -t developer Enter; sleep 3
+tmux send-keys -t developer "Implement Feature 1.1 Code table row 1: 'Implement progress bar component with animated fill'. Read tests at output/frontend/__tests__/carousel-autoscroll-progress.test.ts. Run tests. Tick Implemented for that row. Commit. Let me know when done."
+tmux send-keys -t developer Enter
+sleep 120 && tmux capture-pane -t developer -p -S -30
 
+# ── QA-REVIEWER: Row 1 of Code table ──
+tmux send-keys -t qa-reviewer C-c; sleep 2
+tmux send-keys -t qa-reviewer "/new"; tmux send-keys -t qa-reviewer Enter; sleep 3
+tmux send-keys -t qa-reviewer "/model ollama/kimi-k2.6:cloud"
+tmux send-keys -t qa-reviewer Enter; sleep 3
+tmux send-keys -t qa-reviewer "Review Feature 1.1 Code table row 1. Tests at output/frontend/__tests__/carousel-autoscroll-progress.test.ts, code at output/frontend/src/components/Carousel.tsx. Run tests. Tick QA Reviewed for that row. Let me know when done."
+tmux send-keys -t qa-reviewer Enter
+sleep 120 && tmux capture-pane -t qa-reviewer -p -S -30
+
+# ── Repeat for Code table rows 2, 3 ──
+```
+
+### Phase C: Final Review Table (Row by Row)
+
+```bash
+# ── QA-REVIEWER: Row 1 of Final Review table ──
+tmux send-keys -t qa-reviewer C-c; sleep 2
+tmux send-keys -t qa-reviewer "/new"; tmux send-keys -t qa-reviewer Enter; sleep 3
+tmux send-keys -t qa-reviewer "/model ollama/kimi-k2.6:cloud"
+tmux send-keys -t qa-reviewer Enter; sleep 3
+tmux send-keys -t qa-reviewer "Perform Feature 1.1 Final Review table row 1: 'Verify all 3 tests pass'. Run the full test suite. Tick QA Reviewed for that row. Let me know when done."
+tmux send-keys -t qa-reviewer Enter
+sleep 60 && tmux capture-pane -t qa-reviewer -p -S -30
+
+# ── Repeat for Final Review table rows 2, 3 ──
+```
+
+### Mid-Cycle Work-Planner Re-Spawn (As Needed)
+
+If QA identifies a missing feature (e.g., "Add keyboard navigation"), edit the checklist directly with new rows. If the change is large (multiple new features), spawn Work-Planner:
+
+```bash
 tmux new-session -d -s work-planner "ollama launch pi --model glm-5.1:cloud -y"
 sleep 5
 
 tmux send-keys -t work-planner "I'm the Orchestrator. Update the existing checklist
 docs/checklists/2026-04-10-1-carousel-autoscroll-progress-bar.md to add:
-- Sub-task 2.5: Add keyboard navigation support
-Break this into: Write tests, Implement feature, QA review.
+- New feature 1.2: Keyboard navigation support
+Add Test, Code, and Final Review tables.
 Let me know when done."
 tmux send-keys -t work-planner Enter
 

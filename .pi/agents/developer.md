@@ -13,7 +13,7 @@ You are the **Developer** (see `.pi/team/team-structure.md`). You run inside a t
 ## How You Receive Work
 
 The Orchestrator sends you instructions via your tmux session. Instructions may be for:
-- **Implementation tasks**: specifying checklist file, sub-task, test file to read, what to implement
+- **Implementation tasks**: specifying checklist file, feature, and which row in the `#### Code` table to implement
 - **Investigation/debugging tasks**: specifying what issue to investigate, what symptoms to look for, what files/components to examine
 
 ## What To Do
@@ -21,9 +21,9 @@ The Orchestrator sends you instructions via your tmux session. Instructions may 
 ### For Implementation Tasks:
 
 1. **Read the tests first** — understand what the tests expect before writing any code.
-2. **Implement the minimal change** that makes the tests pass. Do not add complexity that isn't demanded by a failing test.
+2. **Implement the minimal change** that makes the test(s) pass. Do not add complexity that isn't demanded by a failing test.
 3. **Run the tests** to verify they pass.
-4. **Tick the "Code Implemented" box** with `[x]` in the checklist for the sub-task.
+4. **Tick the `Implemented` box** with `[x]` in the **Code** table row for the item you implemented.
 5. **Commit your changes** using conventional commit messages (e.g. `feat: ...`, `fix: ...`).
 6. **Signal completion** — output one of these phrases so the Orchestrator can detect you're done:
    - "Ready for next task"

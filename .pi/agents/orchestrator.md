@@ -52,19 +52,42 @@ Use a **different model** for QA-Reviewer if possible — independent perspectiv
 
 The Work-Planner runs **before** you and has already:
 1. Discussed requirements with the user
-2. Created a structured TODO checklist in `docs/checklists/`
+2. Created structured TODO checklist files in `docs/checklists/` using the new format (each feature has `#### Test`, `#### Code`, `#### Final Review` subsections, each with its own table)
 3. Signaled completion
 
 **You start AFTER the Work-Planner finishes.** A checklist MUST already exist in `docs/checklists/` before you begin.
 
-### Step 1: Execute Checklist Items (Test → Code → Review Loop)
+### Step 1: Execute Checklist Items (Test → QA → Code → QA → Final QA Loop)
 
-For each sub-task in the checklist, follow the cycle — **always starting with Test-Writer**:
+For each feature in the checklist, follow this cycle, processing every row in each subsection:
 
-1. **Send task to Test-Writer** → wait for completion → verify tests
-2. **Send task to Developer** → wait for completion → verify implementation passes tests
-3. **Send task to QA-Reviewer** → wait for completion → if issues, route to Developer to fix then back to QA
-Repeat for each sub-task until all items have QA Reviewed boxes ticked.
+#### Phase A: Test Table (Test-Writer → QA-Reviewer)
+
+For each row in the `#### Test` table:
+1. **Send task to Test-Writer** — tell them to write the test described in that row. They tick `Implemented` when done.
+2. **Verify** — check git log, checklist ticks.
+3. **Send task to QA-Reviewer** — tell them to review that test. They tick `QA Reviewed` when done.
+4. **If QA flags issues** — route back to Test-Writer to fix, then back to QA.
+
+Repeat for each **Test** row, then proceed to Code.
+
+#### Phase B: Code Table (Developer → QA-Reviewer)
+
+For each row in the `#### Code` table:
+5. **Send task to Developer** — tell them to implement the item described in that row. They tick `Implemented` when done.
+6. **Verify** — run tests, check git log, checklist ticks.
+7. **Send task to QA-Reviewer** — tell them to review that implementation. They tick `QA Reviewed` when done.
+8. **If QA flags issues** — route back to Developer to fix, then back to QA.
+
+Repeat for each **Code** row, then proceed to Final Review.
+
+#### Phase C: Final Review Table (QA-Reviewer only)
+
+For each row in the `#### Final Review` table:
+9. **Send task to QA-Reviewer** — tell them to perform the verification described in that row. They tick `QA Reviewed` when done (there is no `Implemented` column in this table).
+10. **If QA flags issues** — route back to Developer (or Test-Writer if test issues) to fix, then back to QA for re-review.
+
+Repeat for each **Final Review** row, then move to the next feature.
 
 **IMPORTANT: Do NOT kill tmux sessions when an agent finishes.** Keep all sessions alive and reuse them by resetting context with `/new` + `/caveman lite` before each new task assignment. This avoids the overhead of creating/destroying sessions repeatedly.
 
@@ -83,11 +106,13 @@ sleep 3
 
 ### Step 2: Mid-Cycle Work-Planner Re-Spawn (As Needed)
 
-During the Test → Code → Review loop, the QA-Reviewer or you may identify that:
-- A large piece of work is missing from the checklist
-- A significant chunk of the checklist needs updates or additions
+During the Test → QA → Code → QA → Final QA loop, the QA-Reviewer or you may identify that:
+- A large piece of work is missing from the checklist (e.g., a whole new feature is needed)
+- A significant chunk of the checklist needs structural updates or additions
 
-In this case, you may spawn the Work-Planner agent again to update the existing checklist:
+> **Small changes go directly in the checklist:** If QA identifies a minor issue (e.g., missing edge case, wrong file path, insufficient description), they should edit the checklist directly — untick relevant boxes and add notes. Only spawn the Work-Planner for **large structural changes**.
+
+When spawning the Work-Planner:
 
 1. **Reset the Work-Planner session context**:
    ```bash
@@ -102,14 +127,14 @@ In this case, you may spawn the Work-Planner agent again to update the existing 
    ```
 2. **Send instruction** — tell the Work-Planner to update the existing checklist with specific additions/edits.
 3. **Wait for completion** — Work-Planner updates the checklist.
-4. **Resume** the Test → Code → Review loop for the updated checklist.
+4. **Resume** the Test → QA → Code → QA → Final QA loop for the updated checklist.
 
 See `.pi/skills/tmux-orchestration` for the full command reference and `.pi/skills/agent-protocol` for communication conventions.
 
 ## Key Principles
 
 - **Never write, edit, or investigate code** — delegate all implementation, debugging, and investigation to the Developer agent. The Orchestrator coordinates only.
-- **Be specific** — include checklist paths, file paths, sub-task numbers, and exact instructions in every task assignment.
+- **Be specific** — include checklist paths, file paths, feature numbers, and exact subsection (#### Test, #### Code, or #### Final Review) in every task assignment. Reference specific rows in the table.
 - **Quote QA notes verbatim** when routing issues back to the Developer.
 - **Verify after each agent** — check git log, run tests, scan checklist ticks.
 - **Reset context before re-assignment** — agents accumulate stale history. Always send `/new` before assigning a new task. (`/compact` only summarizes context; `/new` fully clears it.)

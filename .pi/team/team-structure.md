@@ -13,8 +13,10 @@
 ### Work-Planner
 - Takes the user's task description (relayed by Orchestrator) and breaks it into structured TODO checklists
 - Discusses with user about key decisions and preferences
-- Creates checklist files in `docs/checklists/` with phases and sub-tasks
-- Each sub-task has a 3-column tickable format (Tests Written | Code Implemented | QA Reviewed)
+- Creates checklist files in `docs/checklists/` with each feature having three subsections:
+  - `#### Test` table (columns: `Implemented`, `QA Reviewed`, `Description`)
+  - `#### Code` table (columns: `Implemented`, `QA Reviewed`, `Description`)
+  - `#### Final Review` table (columns: `QA Reviewed`, `Description`)
 
 ### Test-Writer
 - Responsible for taking each subtask and writing tests that cover the required functionality, even if the code doesn't compile
@@ -46,42 +48,55 @@ The **Work-Planner** runs independently **before** the Orchestrator workflow beg
 
 1. Work-Planner receives the task description
 2. Work-Planner discusses with user about key decisions and preferences
-3. Work-Planner creates structured TODO checklist files in `docs/checklists/`
+3. Work-Planner creates structured TODO checklist files in `docs/checklists/` with the new format:
+   - Each feature has three subsections: `#### Test`, `#### Code`, `#### Final Review`
+   - **Test** and **Code** tables have columns: `Implemented`, `QA Reviewed`, `Description`
+   - **Final Review** table has columns: `QA Reviewed`, `Description` (no `Implemented` column)
 4. Work-Planner signals completion — checklist is ready
 
 > **The Orchestrator workflow below assumes a checklist already exists.** Do not proceed if there is not a clear checklist to orchestrate work around.
 
-### Phase 1: Checklist Execution Loop (Repeats for Each Sub-Task)
+### Phase 1: Checklist Execution (Per-Feature, Three Subtables)
 
-**The cycle always starts with Test-Writer.** For each sub-task in the checklist:
+For each feature in the checklist, process its three subsections **in order**: Test, then Code, then Final Review.
 
-1. Orchestrator spawns **Test-Writer**
-2. Test-Writer reads in-progress TODO checklists, finds next task with un-ticked "Test Written" box, and writes tests
-3. Once tests are written, Test-Writer ticks the "Test Written" box for that task and informs Orchestrator that work is finished
-4. Orchestrator de-spawns Test-Writer
-5. Orchestrator spawns **Developer**
-6. Developer reads in-progress TODO checklists, finds next task ticked with "Test Written" but un-ticked "Code Implemented" box, and performs developer work to implement code
-7. Once the code is implemented, Developer ticks the "Code Implemented" box, and informs Orchestrator that work is finished
-8. Orchestrator de-spawns Developer
-9. Orchestrator spawns **QA-Reviewer**
-10. QA-Reviewer reads in-progress TODO checklists, finds next task ticked with "Test Written" and "Code Implemented" but un-ticked "QA Reviewed", and reviews tests and code implementation
-11. When QA-Reviewer finishes with review:
-    - If there are changes to be made, QA-Reviewer should untick either the "Test Written" box or the "Code Implemented" box (as appropriate) and add to the checklist with more details.
-    - If the tests and code implementations look good, then QA-Reviewer ticks the "QA Reviewed" box.
-    - QA-Reviewer signals Orchestrator that review is finished
-12. Orchestrator de-spawns QA-Reviewer
+#### Sub-phase 1A: Test Table (Row by Row)
 
-**IMPORTANT** Repeat steps (1) - (12) until entire TODO checklist is completed.
+For **each row** in the `#### Test` table:
 
-### Phase 2: Mid-Cycle Planning Updates (As Needed)
+1. Orchestrator sends task to **Test-Writer** — write the test described in that row
+2. Test-Writer writes the test, ticks `Implemented` for that row, signals completion
+3. Orchestrator sends task to **QA-Reviewer** — review that test
+4. QA-Reviewer reviews the test, ticks `QA Reviewed` for that row (or unticks `Implemented` and adds notes if there are issues)
+5. If issues are flagged, route back to Test-Writer to fix, then back to QA
 
-If during Phase 1, the QA-Reviewer or Orchestrator identifies that:
-- A large piece of work is missing from the checklist
-- A significant chunk of the checklist needs updates or additions
+Repeat for each Test table row. Then proceed to Code.
 
-Then:
-13. Orchestrator spawns **Work-Planner** to update the existing checklist with additions or edits
-14. Work-Planner updates the checklist with the required changes
-15. Work-Planner signals Orchestrator that work is finished
-16. Orchestrator de-spawns Work-Planner
-17. Resume Phase 1 from where it left off (or from the appropriate sub-task in the updated checklist)
+#### Sub-phase 1B: Code Table (Row by Row)
+
+For **each row** in the `#### Code` table:
+
+6. Orchestrator sends task to **Developer** — implement the item described in that row
+7. Developer implements the code, runs tests, ticks `Implemented` for that row, signals completion
+8. Orchestrator sends task to **QA-Reviewer** — review that implementation
+9. QA-Reviewer reviews the code, ticks `QA Reviewed` for that row (or unticks `Implemented` and adds notes if there are issues)
+10. If issues are flagged, route back to Developer to fix, then back to QA
+
+Repeat for each Code table row. Then proceed to Final Review.
+
+#### Sub-phase 1C: Final Review Table (Row by Row)
+
+For **each row** in the `#### Final Review` table:
+
+11. Orchestrator sends task to **QA-Reviewer** — perform the verification described in that row
+12. QA-Reviewer performs the check, ticks `QA Reviewed` for that row (there is no `Implemented` column in this table)
+13. If issues are flagged, route back to Developer (or Test-Writer) to fix, then back to QA
+
+Repeat for each Final Review table row. Then move to the next feature.
+
+### Mid-Cycle Updates: Small Changes vs. Large Changes
+
+During the execution loop, if QA identifies issues:
+
+- **Small changes** — QA should edit the checklist directly: untick relevant `Implemented`/`QA Reviewed` boxes and add notes in the `Description` column or as new rows. No need to spawn Work-Planner.
+- **Large changes** — if whole new features need to be added or the checklist structure needs significant changes, spawn the **Work-Planner** to update the checklist, then resume execution.
