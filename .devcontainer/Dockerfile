@@ -36,7 +36,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN curl -L https://services.gradle.org/distributions/gradle-9.1.0-bin.zip -o gradle-9.1.0-bin.zip
-RUN apt-get install -y unzip
 RUN unzip gradle-9.1.0-bin.zip
 RUN /bin/bash -c "source $HOME/.bashrc"
 
@@ -53,14 +52,13 @@ RUN echo 'root:Docker!' | chpasswd
 USER root
 # Install required packages
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends unzip curl && \
     mkdir "$ANDROID_HOME" .android && \
     cd "$ANDROID_HOME" && \
     curl -o sdk.zip $ANDROID_SDK_URL && \
     unzip sdk.zip && \
     rm sdk.zip && \
 # Install Fastlane
-    apt-get install --no-install-recommends -y --allow-unauthenticated build-essential git ruby-full && \
+    apt-get install -y --no-install-recommends build-essential ruby-full && \
     gem install rake && \
     gem install fastlane && \
     gem install bundler && \
@@ -195,5 +193,33 @@ RUN sed -i 's/\r$//' /usr/local/bin/init-firewall.sh && \
   chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
+
+# ---------------------------------------------------------------------------
+# Build scrcpy from source (no official Linux ARM64 binary is published)
+# ---------------------------------------------------------------------------
+RUN SCRCPY_VERSION="3.3.4" && \
+  apt-get update && apt-get install -y --no-install-recommends \
+    meson \
+    ninja-build \
+    pkg-config \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libsdl2-dev \
+    libusb-1.0-0-dev \
+  && \
+  git clone --depth 1 --branch v${SCRCPY_VERSION} https://github.com/Genymobile/scrcpy.git /tmp/scrcpy-src && \
+  cd /tmp/scrcpy-src && \
+  meson setup build --buildtype=release && \
+  ninja -C build && \
+  cp build/app/scrcpy /usr/local/bin/scrcpy && \
+  cp scrcpy-server /usr/local/bin/ && \
+  chmod +x /usr/local/bin/scrcpy && \
+  cd / && \
+  rm -rf /tmp/scrcpy-src && \
+  apt-get purge -y --auto-remove \
+    meson \
+    ninja-build \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 USER node
