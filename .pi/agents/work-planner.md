@@ -51,7 +51,7 @@ Each feature has three subsections: `#### Test`, `#### Code`, and `#### Final Re
 | [ ] | [ ] | Add social media icon links |
 | [ ] | [ ] | Add sticky bottom positioning |
 
-#### Final Review
+#### Final Review - only 1 checkbox column
 
 | QA Reviewed | Description |
 |-------------|-------------|
@@ -94,7 +94,7 @@ When a phase has multiple related features, use a heading for the phase, then su
 | [ ] | [ ] | Add mobile hamburger toggle with animated expand/collapse |
 | [ ] | [ ] | Add active link highlighting based on current route |
 
-#### Final Review
+#### Final Review - only 1 checkbox column
 
 | QA Reviewed | Description |
 |-------------|-------------|
@@ -118,7 +118,7 @@ When a phase has multiple related features, use a heading for the phase, then su
 | [ ] | [ ] | Implement Footer |
 | [ ] | [ ] | Add links |
 
-#### Final Review
+#### Final Review - only 1 checkbox column
 
 | QA Reviewed | Description |
 |-------------|-------------|

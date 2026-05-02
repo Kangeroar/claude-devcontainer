@@ -16,9 +16,18 @@
 ## Project Context
 
 - Banknote Trading: public frontend at `output/frontend/`, admin at `banknote-trading-admin/`
-- Both share the same self-hosted Convex instance at `:3210`
+- Both share the same self-hosted Convex instance at `:3210` (API) / `:3211` (file storage site origin)
 - Convex schema uses `banknotes` table with indexes `by_banknote_id`, `by_country`, `by_mostPopular`
+- Schema has `imageUrl` (optional string) and `imageStorageId` (optional `_storage` id) fields
+- 46 banknote images to migrate from `public/images/banknotes/` → Convex file storage (checklist 2026-04-26-2, Phases 5–8)
 - Existing frontend pattern: `ConvexClientProvider.tsx` wraps children with `ConvexProvider`
+- Admin has `uploadImageToConvex` in `lib/convex-upload.ts` for image upload flow
 - Admin scaffold: Next.js 16, React 19, Tailwind CSS v4
-- Public frontend: Next.js 14, React 18, Tailwind CSS v3
+- Public frontend: Next.js 14, React 18, Tailwind CSS v3 (static export with `images.unoptimized: true`)
 - Admin auth is a placeholder; real Convex Auth integration deferred to future checklist
+- Image storage tasks (migration, static removal, Next.js config, HTTP cache headers) are in `2026-04-26-2-convex-admin-backend.md`
+- Frontend data caching tasks (LRU cache, useCachedQuery, TTL strategy) are in `2026-04-27-2-frontend-data-caching.md`
+- Admin portal does NOT implement caching — always reads live data from Convex
+- Client-side LRU cache: `lib/banknote-cache.ts` with `BanknoteLRUCache` (max 60, TTL 5min)
+- Write-through semantics: Convex reactive subscriptions overwrite cache, not mutation hooks
+- Convex storage images use `immutable` Cache-Control (content-addressed, never change at same storageId)
